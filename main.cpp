@@ -2,9 +2,7 @@
 #include <hal.h>
 #include "globalVar.h"
 #include "stdutil.h"
-#include "hal_stm32_dma.h"
 #include "ttyConsole.hpp"
-#include "serial_link.hpp"
 #include "castel_link.hpp"
 
 /*
@@ -31,28 +29,14 @@
 
     * utilisation de  simpleSerialMessage (ou une version c++ parametrisable)
       ° 115200 bauds 8 bits sans parité, 1 bit de stop
-      ° sortie : payload -> 12 floats (53 octets à 50Hz) 2650 octets/seconde sur 11500 possible : 25%
+      ° sortie : payload -> 11 floats + 1 short + protocole  :
+      (50 octets à 5Hz) 250 octets/seconde sur 11500 possible : 3%
       ° entree : 1 octet msgId, 2 octets valeur 
 	+ msgId 1 à 4 : valeur longueur du creneau PWM en µs
-      ° classification des
     
 
  */
 
-static constexpr DMAConfig dmaConfig = {
-  stream : STM32_ICU2_CH1_DMA_STREAM,
-  {request : STM32_ICU2_CH1_DMA_REQUEST},
-  inc_peripheral_addr : false,
-  inc_memory_addr : true,
-  circular : false,
-  end_cb : nullptr,
-  error_cb : nullptr,
-  direction : DMA_DIR_P2M,
-  dma_priority : STM32_ICU2_CH1_DMA_PRIORITY,
-  irq_priority : STM32_ICU2_CH1_DMA_IRQ_PRIORITY,
-  psize : 4,
-  msize : 4,
-};
 
 
 static THD_WORKING_AREA(waBlinker, 384);
@@ -60,7 +44,7 @@ static void blinker (void *arg)
 {
   (void)arg;
   chRegSetThreadName("blinker");
-  palToggleLine(LINE_B03_LED_GREEN);
+  palToggleLine(LINE_LED_GREEN);
   chThdSleepMilliseconds(500);
 }
 
@@ -86,7 +70,8 @@ int main(void) {
   
   consoleInit();
   chThdCreateStatic(waBlinker, sizeof(waBlinker), NORMALPRIO, &blinker, NULL);
-
+  castelLinkStart();
+  
   consoleLaunch();  
   
   // main thread does nothing

@@ -269,7 +269,7 @@ $(OBJS): local/$(BOARD)/board.h
 
 
 local/$(BOARD)/board.h: local/$(BOARD)/board.cfg
-	boardGen.pl	$<  $@
+	boardGen.pl --no-pp-line	$<  $@
 
 
 stflash: all

@@ -169,21 +169,18 @@
 /*
  * ICU driver system settings.
  */
-#define STM32_ICU_USE_TIM1                  FALSE
-#define STM32_ICU_USE_TIM2                  TRUE
+#define STM32_ICU_USE_TIM1                  TRUE
+#define STM32_ICU_USE_TIM2                  FALSE
 #define STM32_ICU_TIM1_IRQ_PRIORITY         7
 #define STM32_ICU_TIM2_IRQ_PRIORITY         7
-#define STM32_ICU2_CH1_DMA_STREAM           STM32_DMA_STREAM_ID(1, 5)
-#define STM32_ICU2_CH1_DMA_REQUEST	    4 
-#define STM32_ICU2_CH1_DMA_IRQ_PRIORITY     6
-#define STM32_ICU2_CH1_DMA_PRIORITY         2
+
 
 /*
  * PWM driver system settings.
  */
 #define STM32_PWM_USE_ADVANCED              FALSE
-#define STM32_PWM_USE_TIM1                  TRUE
-#define STM32_PWM_USE_TIM2                  FALSE
+#define STM32_PWM_USE_TIM1                  FALSE
+#define STM32_PWM_USE_TIM2                  TRUE
 #define STM32_PWM_TIM1_IRQ_PRIORITY         7
 #define STM32_PWM_TIM2_IRQ_PRIORITY         7
 
@@ -196,7 +193,7 @@
 /*
  * SERIAL driver system settings.
  */
-#define STM32_SERIAL_USE_USART1             FALSE
+#define STM32_SERIAL_USE_USART1             TRUE
 #define STM32_SERIAL_USE_USART2             TRUE
 #define STM32_SERIAL_USE_LPUART1            FALSE
 #define STM32_SERIAL_USART1_PRIORITY        12

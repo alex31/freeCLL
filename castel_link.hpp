@@ -9,7 +9,7 @@ class castelLinkRawData
 public:
   castelLinkRawData(void);
   void  resetIndex(void);
-  void  push(const uint16_t val);
+  bool  push(const uint16_t val);
 private:
   static constexpr size_t raw_len = 11;
   size_t	index;
@@ -56,14 +56,16 @@ class castelLinkData
 
   
 public:
-  castelLinkData(const castelLinkRawData& _raw);
-  void  sendToHost(void);
+  castelLinkData();
+  castelLinkData(const castelLinkRawData* _raw, const uint8_t _channel);
+  void  sendTelemetry(void);
+  void populate(const castelLinkRawData* _raw, const uint8_t _channel);
   
 private:
   void convertValues(void);
   
 private:
-  const castelLinkRawData& raw;
+  const castelLinkRawData* raw;
 
   union {
     struct {
@@ -79,9 +81,10 @@ private:
     };
     std::array<float, 9> datas;
   };
+  uint8_t	channel;
+
 };
 
   
-void initCastelLink(void);
-void activateCastelLink(void);
-void setCastelLinkDuty(uint16_t dutyPerTenThousand);
+void castelLinkStart(void);
+void castelLinkSetDuty(uint16_t dutyPerTenThousand);
