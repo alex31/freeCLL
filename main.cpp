@@ -2,8 +2,10 @@
 #include <hal.h>
 #include "globalVar.h"
 #include "stdutil.h"
-#include "ttyConsole.hpp"
+#include "config.hpp"
 #include "castel_link.hpp"
+#include "ttyConsole.hpp"
+
 
 /*
 
@@ -67,12 +69,21 @@ int main(void) {
    *   RTOS is active.
    */
 
+  if constexpr (USE_SHELL) {
+      consoleInit();
+    } else {
+#ifdef TRACE
+    chSysHalt("-DTRACE involve USE_SHELL = true in config.hpp");
+#endif
+  }
   
-  consoleInit();
   chThdCreateStatic(waBlinker, sizeof(waBlinker), NORMALPRIO, &blinker, NULL);
   castelLinkStart();
   
-  consoleLaunch();  
+  if constexpr (USE_SHELL) {
+      consoleLaunch();  
+    }
+
   
   // main thread does nothing
   chThdSleep (TIME_INFINITE);
