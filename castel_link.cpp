@@ -117,7 +117,7 @@ void castelLinkStart(void)
 		    4,  raw_pool, msg_raw_fifo);
   chThdCreateStatic(waSendTelemetry, sizeof(waSendTelemetry), NORMALPRIO, &sendTelemetryThd, NULL);
   
-  currentRaw = (castelLinkRawData *) chFifoTakeObjectTimeout(&raw_fifo, TIME_IMMEDIATE);
+  currentRaw = static_cast<castelLinkRawData *> (chFifoTakeObjectTimeout(&raw_fifo, TIME_IMMEDIATE));
 
 
   
@@ -275,7 +275,7 @@ void castelLinkData::convertValues(void)
 
 void castelLinkData::sendTelemetry(void) 
 {
-  simpleMsgSend(CASTELLINK::STREAM_TELEMETRY_PTR, (uint8_t *) this, sizeof(*this));
+  simpleMsgSend(CASTELLINK::STREAM_TELEMETRY_PTR, reinterpret_cast<uint8_t *> (this), sizeof(*this));
 }
 
 
@@ -342,11 +342,11 @@ static void icuWidth_cb (ICUDriver *icup)
     if (width >= CASTELLINK::ICU_MINPULSE_US && width <= CASTELLINK::ICU_MAXPULSE_US) {
       if (currentRaw->push(width)) {
 	chFifoSendObjectI(&raw_fifo, currentRaw);
-	currentRaw = (castelLinkRawData *) chFifoTakeObjectI(&raw_fifo);
+	currentRaw =  static_cast<castelLinkRawData *> (chFifoTakeObjectI(&raw_fifo));
       }
     }
-  } else { // currentRaw == nuulptr
-    currentRaw = (castelLinkRawData *) chFifoTakeObjectI(&raw_fifo);
+  } else { // currentRaw == nullptr
+    currentRaw = static_cast<castelLinkRawData *> (chFifoTakeObjectI(&raw_fifo));
   }
 
   chSysUnlockFromISR();
@@ -369,7 +369,7 @@ static void telemetryReceive_cb(const uint8_t *buffer, const size_t len,  void *
   if (len != sizeof(TelemetryDownMsg)) {
     DebugTrace ("Msg len error : rec %u instead of waited %u", len, sizeof(TelemetryDownMsg));
   } else {
-    TelemetryDownMsg *msg = (TelemetryDownMsg *) buffer;
+    const TelemetryDownMsg *msg = reinterpret_cast<const TelemetryDownMsg *> (buffer);
     switch (msg->msgId) {
     case PWM_ORDER : castelLinkSetDuty(msg->value[0]); break;
     case CALIBRATE : DebugTrace ("Calibrate not yet implemented"); break;
@@ -394,7 +394,7 @@ static void sendTelemetryThd (void *arg)
   castelLinkRawData *rawData;
   
   while (true) {
-    chFifoReceiveObjectTimeout(&raw_fifo, (void **) &rawData,  TIME_INFINITE);
+    chFifoReceiveObjectTimeout(&raw_fifo, reinterpret_cast<void **> (&rawData),  TIME_INFINITE);
     castelLinkData processedData(rawData, 0);
     processedData.sendTelemetry();
     chFifoReturnObject(&raw_fifo, rawData);

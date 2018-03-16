@@ -39,8 +39,6 @@
 
  */
 
-
-
 static THD_WORKING_AREA(waBlinker, 384);
 static void blinker (void *arg)
 {
