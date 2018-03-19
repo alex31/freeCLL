@@ -151,7 +151,7 @@ static void cmd_duty(BaseSequentialStream *lchp, int argc,const char* const argv
   }
 
   const float rawDuty = atof(argv[0]);
-  const float duty = INRANGE(0.0, 100.0, rawDuty);
+  const float duty = INRANGE(-20.0, 120.0, rawDuty);
   if (duty != 0)
     castelLinkSetDuty (500 + duty * 5);
   else

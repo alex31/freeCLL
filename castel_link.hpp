@@ -7,12 +7,13 @@
 class castelLinkRawData
 {
 public:
-  castelLinkRawData(void);
+  castelLinkRawData();
   void  resetIndex(void);
   bool  push(const uint16_t val);
+  void dbgTrace(void) const ;
 private:
   static constexpr size_t raw_len = 11;
-  size_t	index;
+  volatile size_t  index;
   union {
     struct {
       uint16_t	calibration_1ms;

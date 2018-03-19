@@ -56,7 +56,7 @@ static THD_WORKING_AREA(waSendTelemetry, 1024);
 static castelLinkRawData raw_pool[CASTELLINK::FIFO_SIZE];
 static msg_t msg_raw_fifo[CASTELLINK::FIFO_SIZE];
 static objects_fifo_t raw_fifo;
-static castelLinkRawData *currentRaw = nullptr;
+static  castelLinkRawData * volatile currentRaw = nullptr;
 
 
 volatile bool icuOverflow = false;
@@ -153,9 +153,6 @@ void castelLinkStart(void)
   pwmStart(&CASTELLINK::PWM, &pwmcfg);
   castelLinkSetDuty(0);
   pwmEnablePeriodicNotification(&CASTELLINK::PWM);
-  pwmEnableChannelNotification(&CASTELLINK::PWM, CASTELLINK::PWM_COMMAND_CHANNEL);
-  pwmEnableChannelNotification(&CASTELLINK::PWM, CASTELLINK::PWM_HIGHZ_CHANNEL);
-  pwmEnableChannelNotification(&CASTELLINK::PWM, CASTELLINK::PWM_PUSHPULL_CHANNEL);
 
 
   
@@ -177,10 +174,13 @@ void castelLinkSetDuty(uint16_t dutyPerTenThousand)
 		     castelDuty + CASTELLINK::HIGHZ_TIMESHIFT_TICKS);
     pwmEnableChannel(&CASTELLINK::PWM, CASTELLINK::PWM_PUSHPULL_CHANNEL,
 		     CASTELLINK::PUSHPULL_DUTY_TICKS);
+    pwmEnableChannelNotification(&CASTELLINK::PWM, CASTELLINK::PWM_COMMAND_CHANNEL);
+    pwmEnableChannelNotification(&CASTELLINK::PWM, CASTELLINK::PWM_HIGHZ_CHANNEL);
+    pwmEnableChannelNotification(&CASTELLINK::PWM, CASTELLINK::PWM_PUSHPULL_CHANNEL);
   } else {
-    pwmEnableChannel(&CASTELLINK::PWM, CASTELLINK::PWM_COMMAND_CHANNEL, 0);
-    pwmEnableChannel(&CASTELLINK::PWM, CASTELLINK::PWM_HIGHZ_CHANNEL, 0);
-    pwmEnableChannel(&CASTELLINK::PWM, CASTELLINK::PWM_PUSHPULL_CHANNEL, 0);
+    pwmDisableChannel(&CASTELLINK::PWM, CASTELLINK::PWM_COMMAND_CHANNEL);
+    pwmDisableChannel(&CASTELLINK::PWM, CASTELLINK::PWM_HIGHZ_CHANNEL);
+    pwmDisableChannel(&CASTELLINK::PWM, CASTELLINK::PWM_PUSHPULL_CHANNEL);
   }
 }
 
@@ -219,7 +219,7 @@ void castelLinkSetDuty(uint16_t dutyPerTenThousand)
 #                | | \ \  | (_| |  \ V  V /  | |__| |  | (_| | \ |_   | (_| |        
 #                |_|  \_\  \__,_|   \_/\_/   |_____/    \__,_|  \__|   \__,_|        
 */
-castelLinkRawData::castelLinkRawData(void) : index{0}, raw{0} 
+castelLinkRawData::castelLinkRawData() : index{0}, raw{0} 
 {
 }
 
@@ -231,12 +231,23 @@ void castelLinkRawData::resetIndex(void)
 
 bool  castelLinkRawData::push(const uint16_t val)
 {
-  if (index < raw_len)
+  if (index < raw_len) {
     raw[index++]=val;
+  }
 
-  return index == raw_len;
+  const bool filled = (index == raw_len);
+
+  return filled;
 }
 
+void castelLinkRawData::dbgTrace(void) const
+{
+  DebugTrace ("");
+  for (const auto& elem : raw) {
+    chprintf (chp, "%u, ", elem);
+  }
+  DebugTrace ("");
+}
 
 /*
 #                                       _             _    _        _            _            
@@ -322,7 +333,8 @@ void castelLinkData::convertValues(void)
     const float r0 = 10000;
     const float r2 = 10200;
     const float b = 3455;
-    temperature = (1.0 / logf(val*r2/(255.0-val)/r0) / b + (1/298.0)) - 273;
+    //    temperature = (1.0 / logf(val*r2/(255.0-val)/r0) / b + (1/298.0)) - 273;
+    temperature = 1.0 / (logf(val*r2/(255.0-val)/r0) / b + 1/298.0) - 273;
   }
 }
 
@@ -363,7 +375,7 @@ static void pwmModeHighZ_cb (PWMDriver *pwmd)
   chSysLockFromISR();
   //pwmMaskChannelOutput(&CASTELLINK::PWM, CASTELLINK::PWM_COMMAND_CHANNEL, true);
   pwmMaskChannelSide(&CASTELLINK::PWM, CASTELLINK::PWM_COMMAND_CHANNEL, PWM_NORMAL, true);
-  palSetLine(LINE_DBG_HiZ);
+  //  palSetLine(LINE_DBG_HiZ);
   chSysUnlockFromISR();
 }
 
@@ -374,7 +386,7 @@ static void pwmModePushpull_cb (PWMDriver *pwmd)
   
   //pwmMaskChannelOutput(&CASTELLINK::PWM, CASTELLINK::PWM_COMMAND_CHANNEL, false);
   pwmMaskChannelSide(&CASTELLINK::PWM, CASTELLINK::PWM_COMMAND_CHANNEL, PWM_NORMAL, false);
-  palClearLine(LINE_DBG_HiZ);
+  //  palClearLine(LINE_DBG_HiZ);
   icuStopCaptureI(&CASTELLINK::ICU);
   if (icuOverflow && currentRaw) {
     icuOverflow = false;
@@ -398,7 +410,8 @@ static void icuWidth_cb (ICUDriver *icup)
   const icucnt_t width = icuGetWidthX(icup);
 
   if (currentRaw) {
-    if (width >= CASTELLINK::ICU_MINPULSE_US && width <= CASTELLINK::ICU_MAXPULSE_US) {
+    if (width >= CASTELLINK::ICU_MINPULSE_TICK && width <= CASTELLINK::ICU_MAXPULSE_TICK) {
+      icuStopCaptureI(&CASTELLINK::ICU);
       if (currentRaw->push(width)) {
 	chFifoSendObjectI(&raw_fifo, currentRaw);
 	currentRaw =  static_cast<castelLinkRawData *> (chFifoTakeObjectI(&raw_fifo));
@@ -415,10 +428,11 @@ static void icuWidth_cb (ICUDriver *icup)
 static void icuTimout_cb (ICUDriver *icud)
 {
   (void) icud;
-  chSysLockFromISR();
+
   icuOverflow = true;
-  
-  chSysUnlockFromISR();
+  palSetLine(LINE_DBG_HiZ);
+  chSysPolledDelayX(10);
+  palClearLine(LINE_DBG_HiZ);
 }
 
 static void telemetryReceive_cb(const uint8_t *buffer, const size_t len,  void * const userData)
@@ -456,7 +470,8 @@ static void sendTelemetryThd (void *arg)
     chFifoReceiveObjectTimeout(&raw_fifo, reinterpret_cast<void **> (&rawData),  TIME_INFINITE);
     castelLinkData processedData(rawData, 0);
     processedData.sendTelemetry();
-    processedData.dbgTrace();
+    //    rawData->dbgTrace();
+     processedData.dbgTrace();
     chFifoReturnObject(&raw_fifo, rawData);
   }
 }
@@ -485,6 +500,22 @@ static void sendTelemetryThd (void *arg)
 static void initPulse_cb(PWMDriver *pwmp)
 {
   (void) pwmp;
+  static constexpr uint32_t pulses[] = {
+    0,    // no pulse
+    1000, // calib
+    1500, // voltage
+    2000, // ripple
+    2000, // current
+    2000, // throttle
+    2000, // power
+    2000, // rpm
+    2000, // bec volt
+    5000, // bec current
+    500,  // cal
+    2500  // temp
+  };
+
+
 
   static uint32_t count =0;
   
@@ -494,13 +525,8 @@ static void initPulse_cb(PWMDriver *pwmp)
   }
 
   chSysLockFromISR();
-  uint32_t pulseDurationUs;
-  if (count == 0) {
-    pulseDurationUs = 1000;
-  } else {
-    pulseDurationUs =  500 + ((count-1) * 300);
-  }
-  
+  const uint32_t pulseDurationUs = pulses[count+1];
+
   gptStartOneShotI(&GPTD6, pulseDurationUs);
   count++;
   chSysUnlockFromISR();
@@ -509,8 +535,6 @@ static void initPulse_cb(PWMDriver *pwmp)
 static void gpt6_cb(GPTDriver *gptp)
 {
   (void) gptp;
-
-
   chSysLockFromISR();
   if (palReadLine(LINE_TEST_PULSE) == PAL_HIGH) {
     palClearLine(LINE_TEST_PULSE);

@@ -33,7 +33,7 @@ namespace CASTELLINK {
   static inline constexpr uint32_t	PWM_FREQ = 50_hz;
   static inline constexpr uint32_t	TICK_PER_PERIOD = 20000;
   static inline constexpr uint32_t	HIGHZ_TIMESHIFT_MICROSECONDS = 100;
-  static inline constexpr uint32_t	PUSHPULL_DUTY_MILLISECONDS = 10;
+  static inline constexpr uint32_t	PUSHPULL_DUTY_MILLISECONDS = 14;
 
   static inline constexpr ICUDriver&	ICU		 = ICUD1;
   static inline constexpr icuchannel_t	ICU_CHANNEL      = ICU_CHANNEL_1;
@@ -56,10 +56,13 @@ namespace CASTELLINK {
   static inline constexpr uint32_t	PUSHPULL_DUTY_TICKS = (PUSHPULL_DUTY_MILLISECONDS *
 							       TICK_FREQ) / 1e3;
 
-  static inline constexpr uint32_t	ICU_MINPULSE_TICK      = (ICU_TIMFREQ *
-								  ICU_MINPULSE_US) / 1e6;
-  static inline constexpr uint32_t	ICU_MAXPULSE_TICK      = (ICU_TIMFREQ *
-								  ICU_MAXPULSE_US) / 1e6;
+  static inline constexpr uint32_t	ICU_MINPULSE_TICK      = (static_cast<uint64_t> (ICU_TIMFREQ) *
+								  static_cast<uint64_t> (ICU_MINPULSE_US))
+								  / static_cast<uint64_t> (1e6);
+  static inline constexpr uint32_t	ICU_MAXPULSE_TICK      = (static_cast<uint64_t> (ICU_TIMFREQ) *
+								  static_cast<uint64_t> (ICU_MAXPULSE_US))
+    								  / static_cast<uint64_t> (1e6);
+
 
   static constexpr BaseSequentialStream* STREAM_TELEMETRY_PTR = (BaseSequentialStream *) &SD_TELEMETRY;
 };
