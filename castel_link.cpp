@@ -42,7 +42,8 @@ static void icuWidth_cb (ICUDriver *icud);
 static void icuTimout_cb (ICUDriver *icud);
 static void sendTelemetryThd (void *arg);
 static void telemetryReceive_cb(const uint8_t *buffer, const size_t len,  void * const userData);
-
+static void initPulse_cb(PWMDriver *pwmp);
+static void gpt6_cb(GPTDriver *gptp);
 /*
 #                  __ _   _            _               _          
 #                 / _` | | |          | |             | |         
@@ -86,7 +87,7 @@ static constexpr PWMConfig pwmcfg = {
   .period    = CASTELLINK::TICK_PER_PERIOD,
   .callback  = &pwmStartIcu_cb,
   .channels  = {
-    {.mode = PWM_OUTPUT_ACTIVE_LOW, .callback = nullptr}, // start pulse
+    {.mode = PWM_OUTPUT_ACTIVE_LOW, .callback = &initPulse_cb}, // start pulse
     {.mode = PWM_OUTPUT_DISABLED,   .callback = &pwmModeHighZ_cb},
     {.mode = PWM_OUTPUT_DISABLED,   .callback = &pwmModePushpull_cb},
     {.mode = PWM_OUTPUT_DISABLED,   .callback = nullptr},
@@ -109,8 +110,33 @@ static constexpr ICUConfig icucfg = {
 };
 
 
+/*
+ * GPT6 configuration.
+ */
+static constexpr GPTConfig gpt6cfg = {
+  static_cast<uint32_t>(1e6),    /* 1Mhz timer clock.  1000 ticks pour 1ms  */
+  &gpt6_cb,   
+  0,
+  0
+};
 
- 
+
+
+ /*
+#                 _ __            _       _    _                 
+#                | '_ \          | |     | |  (_)                
+#                | |_) |  _   _  | |__   | |   _     ___         
+#                | .__/  | | | | | '_ \  | |  | |   / __|        
+#                | |     | |_| | | |_) | | |  | |  | (__         
+#                |_|      \__,_| |_.__/  |_|  |_|   \___|        
+#                         _ __    _          
+#                        | '_ \  (_)         
+#                  __ _  | |_) |  _          
+#                 / _` | | .__/  | |         
+#                | (_| | | |     | |         
+#                 \__,_| |_|     |_|         
+*/
+
 
 
 void castelLinkStart(void)
@@ -122,11 +148,12 @@ void castelLinkStart(void)
   currentRaw = static_cast<castelLinkRawData *> (chFifoTakeObjectTimeout(&raw_fifo, TIME_IMMEDIATE));
 
 
-  
+  gptStart(&GPTD6, &gpt6cfg);
 
   pwmStart(&CASTELLINK::PWM, &pwmcfg);
   castelLinkSetDuty(0);
   pwmEnablePeriodicNotification(&CASTELLINK::PWM);
+  pwmEnableChannelNotification(&CASTELLINK::PWM, CASTELLINK::PWM_COMMAND_CHANNEL);
   pwmEnableChannelNotification(&CASTELLINK::PWM, CASTELLINK::PWM_HIGHZ_CHANNEL);
   pwmEnableChannelNotification(&CASTELLINK::PWM, CASTELLINK::PWM_PUSHPULL_CHANNEL);
 
@@ -161,6 +188,20 @@ void castelLinkSetDuty(uint16_t dutyPerTenThousand)
 
 
 
+/*
+#                        _                                
+#                       | |                               
+#                  ___  | |    __ _   ___    ___          
+#                 / __| | |   / _` | / __|  / __|         
+#                | (__  | |  | (_| | \__ \  \__ \         
+#                 \___| |_|   \__,_| |___/  |___/         
+#                     _            __   _            _    _      _                          
+#                    | |          / _| (_)          (_)  | |    (_)                         
+#                  __| |    ___  | |_   _    _ __    _   | |_    _     ___    _ __          
+#                 / _` |   / _ \ |  _| | |  | '_ \  | |  | __|  | |   / _ \  | '_ \         
+#                | (_| |  |  __/ | |   | |  | | | | | |  \ |_   | |  | (_) | | | | |        
+#                 \__,_|   \___| |_|   |_|  |_| |_| |_|   \__|  |_|   \___/  |_| |_|        
+*/
 
 
 
@@ -418,4 +459,64 @@ static void sendTelemetryThd (void *arg)
     processedData.dbgTrace();
     chFifoReturnObject(&raw_fifo, rawData);
   }
+}
+
+
+/*
+#                     _    _        __ _         
+#                    | |  | |      / _` |        
+#                  __| |  | |__   | (_| |        
+#                 / _` |  | '_ \   \__, |        
+#                | (_| |  | |_) |   __/ |        
+#                 \__,_|  |_.__/   |___/         
+#                               _     __         
+#                              | |   / _|        
+#                 ___     ___  | |  | |_         
+#                / __|   / _ \ | |  |  _|        
+#                \__ \  |  __/ | |  | |          
+#                |___/   \___| |_|  |_|          
+#                 _                    _            
+#                | |                  | |           
+#                | |_     ___   ___   | |_          
+#                | __|   / _ \ / __|  | __|         
+#                \ |_   |  __/ \__ \  \ |_          
+#                 \__|   \___| |___/   \__|         
+*/
+static void initPulse_cb(PWMDriver *pwmp)
+{
+  (void) pwmp;
+
+  static uint32_t count =0;
+  
+  if (count == 11) {
+    count = 0;
+    return;
+  }
+
+  chSysLockFromISR();
+  uint32_t pulseDurationUs;
+  if (count == 0) {
+    pulseDurationUs = 1000;
+  } else {
+    pulseDurationUs =  500 + ((count-1) * 300);
+  }
+  
+  gptStartOneShotI(&GPTD6, pulseDurationUs);
+  count++;
+  chSysUnlockFromISR();
+}
+
+static void gpt6_cb(GPTDriver *gptp)
+{
+  (void) gptp;
+
+
+  chSysLockFromISR();
+  if (palReadLine(LINE_TEST_PULSE) == PAL_HIGH) {
+    palClearLine(LINE_TEST_PULSE);
+    gptStartOneShotI(&GPTD6, 10);
+  } else {
+    palSetLine(LINE_TEST_PULSE);
+  }
+  chSysUnlockFromISR();
 }
