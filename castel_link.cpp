@@ -89,6 +89,8 @@ static constexpr PWMConfig pwmcfg = {
     {.mode = PWM_OUTPUT_ACTIVE_LOW, .callback = nullptr}, // start pulse
     {.mode = PWM_OUTPUT_DISABLED,   .callback = &pwmModeHighZ_cb},
     {.mode = PWM_OUTPUT_DISABLED,   .callback = &pwmModePushpull_cb},
+    {.mode = PWM_OUTPUT_DISABLED,   .callback = nullptr},
+    {.mode = PWM_OUTPUT_DISABLED,   .callback = nullptr},
     {.mode = PWM_OUTPUT_DISABLED,   .callback = nullptr}
   },
   .cr2  = 0,
