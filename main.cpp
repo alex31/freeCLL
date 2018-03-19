@@ -44,8 +44,10 @@ static void blinker (void *arg)
 {
   (void)arg;
   chRegSetThreadName("blinker");
-  palToggleLine(LINE_LED_GREEN);
-  chThdSleepMilliseconds(500);
+  while (true) {
+    palToggleLine(LINE_LED_GREEN);
+    chThdSleepMilliseconds(500);
+  }
 }
 
 

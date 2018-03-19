@@ -15,7 +15,7 @@
 #include "rtcAccess.h"
 #include "printf.h"
 #include "portage.h"
-
+#include "castel_link.hpp"
 
 /*===========================================================================*/
 /* START OF EDITABLE SECTION                                           */
@@ -29,6 +29,7 @@ static void cmd_threads (BaseSequentialStream *lchp, int argc,const char * const
 #endif
 static void cmd_rtc(BaseSequentialStream *lchp, int argc,const char* const argv[]);
 static void cmd_uid(BaseSequentialStream *lchp, int argc,const char* const argv[]);
+static void cmd_duty(BaseSequentialStream *lchp, int argc,const char* const argv[]);
 static void cmd_param(BaseSequentialStream *lchp, int argc,const char* const argv[]);
 
 static const ShellCommand commands[] = {
@@ -37,7 +38,8 @@ static const ShellCommand commands[] = {
   {"threads", cmd_threads},	// affiche pour chaque thread le taux d'utilisation de la pile et du CPU
 #endif
   {"rtc", cmd_rtc},		// affiche l'heure contenue par la RTC
-  {"uid", cmd_uid},		// affiche le numéri d'identification unique du MCU
+  {"uid", cmd_uid},		// affiche le numéro d'identification unique du MCU
+  {"duty", cmd_duty},		// change pwm duty for attached castel link controler
   {"param", cmd_param},		// fonction à but pedagogique qui affiche les
 				//   paramètres qui lui sont passés
   {NULL, NULL}			// marqueur de fin de tableau
@@ -138,6 +140,24 @@ static void cmd_uid(BaseSequentialStream *lchp, int argc,const char* const argv[
   for (uint32_t i=0; i< UniqProcessorIdLen; i++)
     chprintf (lchp, "[%x] ", UniqProcessorId[i]);
   chprintf (lchp, "\r\n");
+}
+
+static void cmd_duty(BaseSequentialStream *lchp, int argc,const char* const argv[]) {
+  (void)argv;
+  
+  if (argc != 1) {
+    chprintf (lchp, "Usage: duty \r\n");
+    return;
+  }
+
+  const float rawDuty = atof(argv[0]);
+  const float duty = INRANGE(0.0, 100.0, rawDuty);
+  if (duty != 0)
+    castelLinkSetDuty (500 + duty * 5);
+  else
+    castelLinkSetDuty (0);
+
+  DebugTrace ("set duty to %u", static_cast<uint16_t>(duty * 100));
 }
 
 

@@ -131,6 +131,7 @@ void castelLinkStart(void)
 
   
   icuStart(&CASTELLINK::ICU, &icucfg);
+
   sdStart(&CASTELLINK::SD_TELEMETRY, &hostcfg);
 
   simpleMsgBind (CASTELLINK::STREAM_TELEMETRY_PTR, telemetryReceive_cb, nullptr);
@@ -248,6 +249,15 @@ void castelLinkData::populate(const castelLinkRawData* _raw, const uint8_t _chan
   convertValues();
 }
 
+void castelLinkData::dbgTrace(void) const
+{
+  DebugTrace ("bat = %.2f ripple=%.2f current=%.2f throttle=%.2f power=%.2f",
+	      bat_voltage, ripple_voltage, current, throttle, power);
+  DebugTrace ("rpm=%.2f bec_v=%.2f bec_c=%.2f temp=%.2f",
+	      rpm, bec_voltage, bec_current, temperature);
+	      
+}
+
 
 void castelLinkData::convertValues(void) 
 {
@@ -298,6 +308,7 @@ static void pwmStartIcu_cb (PWMDriver *pwmd)
   (void) pwmd;
   chSysLockFromISR();
   icuStartCaptureI(&CASTELLINK::ICU);
+  icuEnableNotificationsI(&CASTELLINK::ICU);
 
   chSysUnlockFromISR();
 }
@@ -307,8 +318,9 @@ static void pwmModeHighZ_cb (PWMDriver *pwmd)
 {
   (void) pwmd;
   chSysLockFromISR();
-  palSetLineMode(LINE_CASTEL_PWM, PAL_MODE_INPUT);
-
+  //pwmMaskChannelOutput(&CASTELLINK::PWM, CASTELLINK::PWM_COMMAND_CHANNEL, true);
+  pwmMaskChannelSide(&CASTELLINK::PWM, CASTELLINK::PWM_COMMAND_CHANNEL, PWM_NORMAL, true);
+  palSetLine(LINE_DBG_HiZ);
   chSysUnlockFromISR();
 }
 
@@ -316,14 +328,18 @@ static void pwmModePushpull_cb (PWMDriver *pwmd)
 {
   (void) pwmd;
   chSysLockFromISR();
-
- palSetLineMode(LINE_CASTEL_PWM,  PAL_MODE_ALTERNATE(AF_LINE_CASTEL_PWM));
- if (icuOverflow && currentRaw) {
-   currentRaw->resetIndex();
- }
-   
- 
- chSysUnlockFromISR();
+  
+  //pwmMaskChannelOutput(&CASTELLINK::PWM, CASTELLINK::PWM_COMMAND_CHANNEL, false);
+  pwmMaskChannelSide(&CASTELLINK::PWM, CASTELLINK::PWM_COMMAND_CHANNEL, PWM_NORMAL, false);
+  palClearLine(LINE_DBG_HiZ);
+  icuStopCaptureI(&CASTELLINK::ICU);
+  if (icuOverflow && currentRaw) {
+    icuOverflow = false;
+    currentRaw->resetIndex();
+  }
+  
+  
+  chSysUnlockFromISR();
 }
 
 
@@ -397,6 +413,7 @@ static void sendTelemetryThd (void *arg)
     chFifoReceiveObjectTimeout(&raw_fifo, reinterpret_cast<void **> (&rawData),  TIME_INFINITE);
     castelLinkData processedData(rawData, 0);
     processedData.sendTelemetry();
+    processedData.dbgTrace();
     chFifoReturnObject(&raw_fifo, rawData);
   }
 }

@@ -60,6 +60,7 @@ public:
   castelLinkData(const castelLinkRawData* _raw, const uint8_t _channel);
   void  sendTelemetry(void);
   void populate(const castelLinkRawData* _raw, const uint8_t _channel);
+  void dbgTrace(void) const ;
   
 private:
   void convertValues(void);
