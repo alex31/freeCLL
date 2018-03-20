@@ -44,6 +44,7 @@ static void sendTelemetryThd (void *arg);
 static void telemetryReceive_cb(const uint8_t *buffer, const size_t len,  void * const userData);
 static void initPulse_cb(PWMDriver *pwmp);
 static void gpt6_cb(GPTDriver *gptp);
+static void gpt7_cb(GPTDriver *gptp);
 /*
 #                  __ _   _            _               _          
 #                 / _` | | |          | |             | |         
@@ -120,6 +121,16 @@ static constexpr GPTConfig gpt6cfg = {
   0
 };
 
+/*
+ * GPT7 configuration.
+ */
+static constexpr GPTConfig gpt7cfg = {
+  static_cast<uint32_t>(1e6),    /* 1Mhz timer clock.  1000 ticks pour 1ms  */
+  &gpt7_cb,   
+  0,
+  0
+};
+
 
 
  /*
@@ -149,6 +160,7 @@ void castelLinkStart(void)
 
 
   gptStart(&GPTD6, &gpt6cfg);
+  gptStart(&GPTD7, &gpt7cfg);
   pwmStart(&CASTELLINK::PWM, &pwmcfg);
   icuStart(&CASTELLINK::ICU, &icucfg);
   sdStart(&CASTELLINK::SD_TELEMETRY, &hostcfg);
@@ -523,6 +535,7 @@ static void initPulse_cb(PWMDriver *pwmp)
   const uint32_t pulseDurationUs = pulses[count+1];
 
   gptStartOneShotI(&GPTD6, pulseDurationUs);
+  gptStartOneShotI(&GPTD7, pulseDurationUs+10);
   count++;
   chSysUnlockFromISR();
 }
@@ -530,12 +543,11 @@ static void initPulse_cb(PWMDriver *pwmp)
 static void gpt6_cb(GPTDriver *gptp)
 {
   (void) gptp;
-  if (palReadLine(LINE_TEST_PULSE) == PAL_HIGH) {
     palClearLine(LINE_TEST_PULSE);
-    chSysLockFromISR();
-    gptStartOneShotI(&GPTD6, 10);
-    chSysUnlockFromISR();
-  } else {
+}
+
+static void gpt7_cb(GPTDriver *gptp)
+{
+  (void) gptp;
     palSetLine(LINE_TEST_PULSE);
-  }
 }
