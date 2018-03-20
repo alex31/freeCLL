@@ -15,6 +15,7 @@
 #include "rtcAccess.h"
 #include "printf.h"
 #include "portage.h"
+#include "config.hpp"
 #include "castel_link.hpp"
 
 /*===========================================================================*/
@@ -303,7 +304,7 @@ static void cmd_threads(BaseSequentialStream *lchp, int argc,const char* const a
 
 static const ShellConfig shell_cfg1 = {
 #if CONSOLE_DEV_USB == 0
-  (BaseSequentialStream *) &CONSOLE_DEV_SD,
+  (BaseSequentialStream *) &SD_SHELL,
 #else
   (BaseSequentialStream *) &SDU1,
 #endif
@@ -319,13 +320,7 @@ void consoleInit (void)
    * USBD1 : FS, USBD2 : HS
    */
 
-#if CONSOLE_DEV_USB != 0
-  usbSerialInit(&SDU1, &USBDRIVER); 
-  chp = (BaseSequentialStream *) &SDU1;
-#else
-  sdStart(&CONSOLE_DEV_SD, &ftdiConfig);
-  chp = (BaseSequentialStream *) &CONSOLE_DEV_SD;
-#endif
+  sdStart(&SD_SHELL, &ftdiConfig);
   /*
    * Shell manager initialization.
    */

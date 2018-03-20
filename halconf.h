@@ -30,7 +30,7 @@
 
 #include "mcuconf.h"
 
-#define   STM32_DMA_REQUIRED        TRUE
+//#define   STM32_DMA_REQUIRED        TRUE
 
 /**
  * @brief   Enables the PAL subsystem.
@@ -71,7 +71,13 @@
  * @brief   Enables the GPT subsystem.
  */
 #if !defined(HAL_USE_GPT) || defined(__DOXYGEN__)
-#define HAL_USE_GPT                 TRUE
+#ifdef SELFTEST_PULSES_ENABLED
+#define HAL_USE_GPT          TRUE
+#else
+#define HAL_USE_GPT          FALSE
+#endif
+
+
 #endif
 
 /**

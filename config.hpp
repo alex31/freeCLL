@@ -3,6 +3,32 @@
 #include <ch.h>
 #include <hal.h>
 
+
+/*
+ to enable self test pulse generation :
+	search SELFTEST_PULSES_ENABLED in mcuconf.h
+
+ to enable  chibios internal tests and debug assert :
+	search DEBUG_ASSERTS_ENABLED in mcuconf.h
+
+ to enable optimised compilation : Makefile
+
+ to enable TRACE and shell : -DTRACE in Makefile
+
+ 
+
+*/
+
+#undef DebugTrace
+#if defined TRACE 
+#include "printf.h"
+#define DebugTrace(fmt, ...) chprintf (STREAM_SHELL_PTR, fmt "\r\n", ## __VA_ARGS__ )
+#else
+#define DebugTrace(...) 
+#endif // TRACE
+
+
+
 static inline constexpr uint32_t operator"" _timChannel (unsigned long long int channel)
 {
   return channel - 1U;
@@ -19,9 +45,6 @@ static inline constexpr uint32_t operator"" _mhz (unsigned long long int freq)
 {
   return freq * 1000_khz;
 }
-
-// if USE_SHELL == false, should not be compiled with -DTRACE (see Makefile)
-static inline constexpr bool	USE_SHELL    = true;
 
 
 namespace CASTELLINK {
@@ -43,13 +66,13 @@ namespace CASTELLINK {
 
 
   static inline constexpr SerialDriver&	SD_TELEMETRY    = SD1;
-  static inline constexpr SerialDriver&	SD_SHELL        = SD2;  // wired on NUCLEO32
   static inline constexpr uint32_t	TELEMETRY_BAUD  = 115200U;
 
   static inline constexpr size_t	FIFO_SIZE    = 4;
   
 
   // COMPUTED CONSTANTS, don't EDIT THIS SECTION until you know what you do
+  
   static inline constexpr uint32_t	TICK_FREQ = PWM_FREQ * TICK_PER_PERIOD;
   static inline constexpr uint32_t	HIGHZ_TIMESHIFT_TICKS = (HIGHZ_TIMESHIFT_MICROSECONDS *
 								 TICK_FREQ) / 1e6;
@@ -66,3 +89,11 @@ namespace CASTELLINK {
 
   static constexpr BaseSequentialStream* STREAM_TELEMETRY_PTR = (BaseSequentialStream *) &SD_TELEMETRY;
 };
+
+#ifdef TRACE
+ static inline constexpr bool	USE_SHELL    = true;
+ static inline constexpr SerialDriver&	SD_SHELL        = SD2;  // wired on NUCLEO32
+ static constexpr BaseSequentialStream* STREAM_SHELL_PTR = (BaseSequentialStream *) &SD_SHELL;
+#else
+ static inline constexpr bool	USE_SHELL    = false;
+#endif

@@ -31,6 +31,9 @@
 #define _CHIBIOS_RT_CONF_
 #define _CHIBIOS_RT_CONF_VER_5_0_
 
+
+#include "mcuconf.h"
+
 /*===========================================================================*/
 /**
  * @name System timers settings
@@ -401,8 +404,11 @@
  *
  * @note    The default is @p FALSE.
  */
+#if DEBUG_ASSERTS_ENABLED
 #define CH_DBG_STATISTICS                   TRUE
-
+#else
+#define CH_DBG_STATISTICS                   FALSE
+#endif
 /**
  * @brief   Debug option, system state check.
  * @details If enabled the correct call protocol for system APIs is checked
@@ -410,7 +416,11 @@
  *
  * @note    The default is @p FALSE.
  */
+#if DEBUG_ASSERTS_ENABLED
 #define CH_DBG_SYSTEM_STATE_CHECK           TRUE
+#else
+#define CH_DBG_SYSTEM_STATE_CHECK           FALSE
+#endif
 
 /**
  * @brief   Debug option, parameters checks.
@@ -419,7 +429,11 @@
  *
  * @note    The default is @p FALSE.
  */
+#if DEBUG_ASSERTS_ENABLED
 #define CH_DBG_ENABLE_CHECKS                TRUE
+#else
+#define CH_DBG_ENABLE_CHECKS                FALSE
+#endif
 
 /**
  * @brief   Debug option, consistency checks.
@@ -429,7 +443,11 @@
  *
  * @note    The default is @p FALSE.
  */
+#if DEBUG_ASSERTS_ENABLED
 #define CH_DBG_ENABLE_ASSERTS               TRUE
+#else
+#define CH_DBG_ENABLE_ASSERTS               FALSE
+#endif
 
 /**
  * @brief   Debug option, trace buffer.
@@ -439,12 +457,14 @@
  */
 #define CH_DBG_TRACE_MASK                   CH_DBG_TRACE_MASK_DISABLED
 
+
 /**
  * @brief   Trace buffer entries.
  * @note    The trace buffer is only allocated if @p CH_DBG_TRACE_MASK is
  *          different from @p CH_DBG_TRACE_MASK_DISABLED.
  */
 #define CH_DBG_TRACE_BUFFER_SIZE            128
+
 
 /**
  * @brief   Debug option, stack checks.
@@ -456,7 +476,11 @@
  * @note    The default failure mode is to halt the system with the global
  *          @p panic_msg variable set to @p NULL.
  */
+#if DEBUG_ASSERTS_ENABLED
 #define CH_DBG_ENABLE_STACK_CHECK           TRUE
+#else
+#define CH_DBG_ENABLE_STACK_CHECK           FALSE
+#endif
 
 /**
  * @brief   Debug option, stacks initialization.
@@ -466,7 +490,11 @@
  *
  * @note    The default is @p FALSE.
  */
+#if DEBUG_ASSERTS_ENABLED
 #define CH_DBG_FILL_THREADS                 TRUE
+#else
+#define CH_DBG_FILL_THREADS                 FALSE
+#endif
 
 /**
  * @brief   Debug option, threads profiling.
@@ -477,7 +505,11 @@
  * @note    This debug option is not currently compatible with the
  *          tickless mode.
  */
+#if DEBUG_ASSERTS_ENABLED
 #define CH_DBG_THREADS_PROFILING            TRUE
+#else
+#define CH_DBG_THREADS_PROFILING            FALSE
+#endif
 
 /** @} */
 

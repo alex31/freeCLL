@@ -27,5 +27,4 @@ extern const uint8_t UniqProcessorIdLen ;
 extern SerialUSBDriver SDU1;
 #endif // HAL_USE_SERIAL_USB
 
-extern BaseSequentialStream *chp;
 #endif //  __GLOBAL_VAR_H__

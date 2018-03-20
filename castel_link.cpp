@@ -43,8 +43,10 @@ static void icuTimout_cb (ICUDriver *icud);
 static void sendTelemetryThd (void *arg);
 static void telemetryReceive_cb(const uint8_t *buffer, const size_t len,  void * const userData);
 static void initPulse_cb(PWMDriver *pwmp);
+#if SELFTEST_PULSES_ENABLED
 static void gpt6_cb(GPTDriver *gptp);
 static void gpt7_cb(GPTDriver *gptp);
+#endif
 /*
 #                  __ _   _            _               _          
 #                 / _` | | |          | |             | |         
@@ -111,6 +113,7 @@ static constexpr ICUConfig icucfg = {
 };
 
 
+#if SELFTEST_PULSES_ENABLED
 /*
  * GPT6 configuration.
  */
@@ -130,7 +133,7 @@ static constexpr GPTConfig gpt7cfg = {
   0,
   0
 };
-
+#endif
 
 
  /*
@@ -158,9 +161,10 @@ void castelLinkStart(void)
   
   currentRaw = static_cast<castelLinkRawData *> (chFifoTakeObjectTimeout(&raw_fifo, TIME_IMMEDIATE));
 
-
+#if SELFTEST_PULSES_ENABLED
   gptStart(&GPTD6, &gpt6cfg);
   gptStart(&GPTD7, &gpt7cfg);
+#endif
   pwmStart(&CASTELLINK::PWM, &pwmcfg);
   icuStart(&CASTELLINK::ICU, &icucfg);
   sdStart(&CASTELLINK::SD_TELEMETRY, &hostcfg);
@@ -249,11 +253,13 @@ bool  castelLinkRawData::push(const uint16_t val)
 
 void castelLinkRawData::dbgTrace(void) const
 {
+#if defined TRACE
   DebugTrace ("");
   for (const auto& elem : raw) {
-    chprintf (chp, "%u, ", elem);
+    chprintf (STREAM_SHELL_PTR, "%u, ", elem);
   }
   DebugTrace ("");
+#endif
 }
 
 /*
@@ -312,11 +318,12 @@ void castelLinkData::populate(const castelLinkRawData* _raw, const uint8_t _chan
 
 void castelLinkData::dbgTrace(void) const
 {
+#if defined TRACE
   DebugTrace ("bat = %.2f ripple=%.2f current=%.2f throttle=%.2f power=%.2f",
 	      bat_voltage, ripple_voltage, current, throttle, power);
   DebugTrace ("rpm=%.2f bec_v=%.2f bec_c=%.2f temp=%.2f",
 	      rpm, bec_voltage, bec_current, temperature);
-	      
+#endif	      
 }
 
 
@@ -507,6 +514,7 @@ static void sendTelemetryThd (void *arg)
 static void initPulse_cb(PWMDriver *pwmp)
 {
   (void) pwmp;
+#if SELFTEST_PULSES_ENABLED
   static constexpr uint32_t pulses[] = {
     0,    // no pulse
     1000, // calib
@@ -521,7 +529,7 @@ static void initPulse_cb(PWMDriver *pwmp)
     500,  // cal
     600  // temp
   };
-
+#endif
 
 
   static uint32_t count =0;
@@ -532,14 +540,17 @@ static void initPulse_cb(PWMDriver *pwmp)
   }
 
   chSysLockFromISR();
-  const uint32_t pulseDurationUs = pulses[count+1];
 
+#if SELFTEST_PULSES_ENABLED
+  const uint32_t pulseDurationUs = pulses[count+1];
   gptStartOneShotI(&GPTD6, pulseDurationUs);
   gptStartOneShotI(&GPTD7, pulseDurationUs+10);
+#endif
   count++;
   chSysUnlockFromISR();
 }
 
+#if SELFTEST_PULSES_ENABLED
 static void gpt6_cb(GPTDriver *gptp)
 {
   (void) gptp;
@@ -551,3 +562,4 @@ static void gpt7_cb(GPTDriver *gptp)
   (void) gptp;
     palSetLine(LINE_TEST_PULSE);
 }
+#endif

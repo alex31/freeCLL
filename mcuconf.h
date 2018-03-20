@@ -33,6 +33,9 @@
 
 #define STM32L4xx_MCUCONF
 
+#define SELFTEST_PULSES_ENABLED		    TRUE
+#define DEBUG_ASSERTS_ENABLED               TRUE
+
 /*
  * HAL driver system settings.
  */
@@ -138,8 +141,13 @@
  */
 #define STM32_GPT_USE_TIM1                  FALSE
 #define STM32_GPT_USE_TIM2                  FALSE
-#define STM32_GPT_USE_TIM6                  TRUE  
-#define STM32_GPT_USE_TIM7                  TRUE 
+#ifdef SELFTEST_PULSES_ENABLED
+#define STM32_GPT_USE_TIM6                  TRUE
+#define STM32_GPT_USE_TIM7                  TRUE
+#else
+#define STM32_GPT_USE_TIM6                  FALSE
+#define STM32_GPT_USE_TIM7                  FALSE
+#endif
 #define STM32_GPT_USE_TIM15                 FALSE
 #define STM32_GPT_USE_TIM16                 FALSE
 #define STM32_GPT_TIM1_IRQ_PRIORITY         7
@@ -262,6 +270,5 @@
 
 #define CH_HEAP_SIZE (32*1024)
 #define CH_HEAP_USE_TLSF 0 // if 0 or undef, chAlloc will be used
-#define CONSOLE_DEV_SD SD2
 
 #endif /* MCUCONF_H */
