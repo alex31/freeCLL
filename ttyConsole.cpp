@@ -1,3 +1,6 @@
+#ifdef TRACE
+
+
 #include <stdio.h>
 #include <string.h>
 #include <strings.h>
@@ -412,4 +415,6 @@ static float stampThreadGetCpuPercent (const ThreadCpuInfo *ti, const uint32_t i
 
   return ti->cpu[idx];
 }
+#endif
+
 #endif

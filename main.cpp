@@ -69,20 +69,19 @@ int main(void) {
    *   RTOS is active.
    */
 
-  if constexpr (USE_SHELL) {
-      consoleInit();
-    } else {
 #ifdef TRACE
-    chSysHalt("-DTRACE involve USE_SHELL = true in config.hpp");
+  consoleInit();
 #endif
-  }
+  
   
   chThdCreateStatic(waBlinker, sizeof(waBlinker), NORMALPRIO, &blinker, NULL);
   castelLinkStart();
   
-  if constexpr (USE_SHELL) {
-      consoleLaunch();  
-    }
+
+#ifdef TRACE
+  consoleLaunch();  
+#endif
+
 
   
   // main thread does nothing
