@@ -46,6 +46,17 @@ static inline constexpr uint32_t operator"" _mhz (unsigned long long int freq)
   return freq * 1000_khz;
 }
 
+static inline constexpr uint32_t usec2rtc ( const uint32_t frequency, const uint32_t usec)
+{
+  return (static_cast<uint64_t> (frequency) *
+	  static_cast<uint64_t> (usec)) / static_cast<uint64_t> (1e6);
+}
+
+static inline constexpr uint32_t msec2rtc ( const uint32_t frequency, const uint32_t usec)
+{
+  return (static_cast<uint64_t> (frequency) *
+	  static_cast<uint64_t> (usec)) / static_cast<uint64_t> (1e3);
+}
 
 namespace CASTELLINK {
   // USER CONSTANTS
@@ -74,19 +85,10 @@ namespace CASTELLINK {
   // COMPUTED CONSTANTS, don't EDIT THIS SECTION until you know what you do
   
   static inline constexpr uint32_t	TICK_FREQ = PWM_FREQ * TICK_PER_PERIOD;
-  static inline constexpr uint32_t	HIGHZ_TIMESHIFT_TICKS = (HIGHZ_TIMESHIFT_MICROSECONDS *
-								 TICK_FREQ) / 1e6;
-  static inline constexpr uint32_t	PUSHPULL_DUTY_TICKS = (PUSHPULL_DUTY_MILLISECONDS *
-							       TICK_FREQ) / 1e3;
-
-  static inline constexpr uint32_t	ICU_MINPULSE_TICK      = (static_cast<uint64_t> (ICU_TIMFREQ) *
-								  static_cast<uint64_t> (ICU_MINPULSE_US))
-								  / static_cast<uint64_t> (1e6);
-  static inline constexpr uint32_t	ICU_MAXPULSE_TICK      = (static_cast<uint64_t> (ICU_TIMFREQ) *
-								  static_cast<uint64_t> (ICU_MAXPULSE_US))
-    								  / static_cast<uint64_t> (1e6);
-
-
+  static inline constexpr uint32_t	HIGHZ_TIMESHIFT_TICKS = usec2rtc(TICK_FREQ, HIGHZ_TIMESHIFT_MICROSECONDS);
+  static inline constexpr uint32_t	PUSHPULL_DUTY_TICKS = msec2rtc(TICK_FREQ, PUSHPULL_DUTY_MILLISECONDS);
+  static inline constexpr uint32_t	ICU_MINPULSE_TICK      = usec2rtc(ICU_TIMFREQ, ICU_MINPULSE_US);
+  static inline constexpr uint32_t	ICU_MAXPULSE_TICK      = usec2rtc(ICU_TIMFREQ, ICU_MAXPULSE_US);
   static constexpr BaseSequentialStream* STREAM_TELEMETRY_PTR = (BaseSequentialStream *) &SD_TELEMETRY;
 };
 
