@@ -43,6 +43,8 @@ static void icuTimout_cb (ICUDriver *icud);
 static void sendTelemetryThd (void *arg);
 static void telemetryReceive_cb(const uint8_t *buffer, const size_t len,  void * const userData);
 static void initPulse_cb(PWMDriver *pwmp);
+static void castelLinkSetDutyFromISR(uint16_t dutyPerTenThousand);
+
 #if SELFTEST_PULSES_ENABLED
 static void gpt6_cb(GPTDriver *gptp);
 static void gpt7_cb(GPTDriver *gptp);
@@ -61,6 +63,8 @@ static msg_t msg_raw_fifo[CASTELLINK::FIFO_SIZE];
 static objects_fifo_t raw_fifo;
 static  castelLinkRawData * volatile currentRaw = nullptr;
 
+
+static virtual_timer_t vtTelemetry;
 
 volatile bool icuOverflow = false;
 
@@ -170,6 +174,7 @@ void castelLinkStart(void)
   sdStart(&CASTELLINK::SD_TELEMETRY, &hostcfg);
 
   simpleMsgBind (CASTELLINK::STREAM_TELEMETRY_PTR, telemetryReceive_cb, nullptr);
+  
 }
 
 
@@ -188,10 +193,39 @@ void castelLinkSetDuty(uint16_t dutyPerTenThousand)
     pwmEnableChannelNotification(&CASTELLINK::PWM, CASTELLINK::PWM_COMMAND_CHANNEL);
     pwmEnableChannelNotification(&CASTELLINK::PWM, CASTELLINK::PWM_HIGHZ_CHANNEL);
     pwmEnableChannelNotification(&CASTELLINK::PWM, CASTELLINK::PWM_PUSHPULL_CHANNEL);
+    if constexpr (CASTELLINK::SHUTDOWN_WITHOUT_TELEMETRY_MS != 0) 
+		   chVTSet(&vtTelemetry, TIME_MS2I(CASTELLINK::SHUTDOWN_WITHOUT_TELEMETRY_MS),
+			   [] (void *arg) {(void) arg;
+			     chSysLockFromISR();
+			     castelLinkSetDutyFromISR(0);
+			     chSysUnlockFromISR();
+			   },
+			   nullptr);
   } else {
     pwmDisableChannel(&CASTELLINK::PWM, CASTELLINK::PWM_COMMAND_CHANNEL);
     pwmDisableChannel(&CASTELLINK::PWM, CASTELLINK::PWM_HIGHZ_CHANNEL);
     pwmDisableChannel(&CASTELLINK::PWM, CASTELLINK::PWM_PUSHPULL_CHANNEL);
+  }
+}
+
+static void castelLinkSetDutyFromISR(uint16_t dutyPerTenThousand)
+{
+  const pwmcnt_t castelDuty = PWM_PERCENTAGE_TO_WIDTH(&CASTELLINK::PWM, dutyPerTenThousand);
+  if (dutyPerTenThousand != 0) {
+    pwmEnableChannelI(&CASTELLINK::PWM, CASTELLINK::PWM_COMMAND_CHANNEL, castelDuty);
+    pwmEnableChannelI(&CASTELLINK::PWM, CASTELLINK::PWM_HIGHZ_CHANNEL,
+		      castelDuty + CASTELLINK::HIGHZ_TIMESHIFT_TICKS);
+    pwmEnableChannelI(&CASTELLINK::PWM, CASTELLINK::PWM_PUSHPULL_CHANNEL,
+		      CASTELLINK::PUSHPULL_DUTY_TICKS);
+    
+    pwmEnablePeriodicNotificationI(&CASTELLINK::PWM);
+    pwmEnableChannelNotificationI(&CASTELLINK::PWM, CASTELLINK::PWM_COMMAND_CHANNEL);
+    pwmEnableChannelNotificationI(&CASTELLINK::PWM, CASTELLINK::PWM_HIGHZ_CHANNEL);
+    pwmEnableChannelNotificationI(&CASTELLINK::PWM, CASTELLINK::PWM_PUSHPULL_CHANNEL);
+  } else {
+    pwmDisableChannelI(&CASTELLINK::PWM, CASTELLINK::PWM_COMMAND_CHANNEL);
+    pwmDisableChannelI(&CASTELLINK::PWM, CASTELLINK::PWM_HIGHZ_CHANNEL);
+    pwmDisableChannelI(&CASTELLINK::PWM, CASTELLINK::PWM_PUSHPULL_CHANNEL);
   }
 }
 
@@ -449,16 +483,32 @@ static void icuTimout_cb (ICUDriver *icud)
   palClearLine(LINE_DBG_HiZ);
 }
 
+
+
+
+
 static void telemetryReceive_cb(const uint8_t *buffer, const size_t len,  void * const userData)
 {
   (void) userData;
+
   
+
   if (len != sizeof(TelemetryDownMsg)) {
     DebugTrace ("Msg len error : rec %u instead of waited %u", len, sizeof(TelemetryDownMsg));
   } else {
     const TelemetryDownMsg *msg = reinterpret_cast<const TelemetryDownMsg *> (buffer);
     switch (msg->msgId) {
-    case PWM_ORDER : castelLinkSetDuty(msg->value[0]); break;
+    case PWM_ORDER :
+      castelLinkSetDuty(msg->value[0]);
+      if constexpr (CASTELLINK::SHUTDOWN_WITHOUT_TELEMETRY_MS != 0) 
+		     chVTSetI(&vtTelemetry, TIME_MS2I(CASTELLINK::SHUTDOWN_WITHOUT_TELEMETRY_MS),
+			      [] (void *arg) {(void) arg;
+				chSysLockFromISR();
+				castelLinkSetDutyFromISR(0);
+				chSysUnlockFromISR();
+			      },
+			      nullptr);
+      break;
     case CALIBRATE : DebugTrace ("Calibrate not yet implemented"); break;
     }
   }

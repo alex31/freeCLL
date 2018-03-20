@@ -69,7 +69,13 @@ int main(void) {
    *   RTOS is active.
    */
 
+
+
+  
 #ifdef TRACE
+  if  (&CASTELLINK::SD_TELEMETRY == &SD_SHELL) {
+       chSysHalt("same serial link used for shell and telemetry");
+    }
   consoleInit();
 #endif
   
