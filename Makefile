@@ -20,16 +20,22 @@ endif
 
 
 ifeq ($(USE_OPT),)
+  USE_OPT =  -Ofast  -flto  -Wall -Wextra \
+	    -falign-functions=16 -fomit-frame-pointer \
+	     $(GCC_DIAG)
+endif
+ifeq ($(USE_OPT),)
+  USE_OPT =  -O2  -ggdb3  -Wall -Wextra \
+	    -falign-functions=16 -fomit-frame-pointer \
+	    $(GCC_DIAG)
+endif
+ifeq ($(USE_OPT),)
   USE_OPT =  -Og  -ggdb3  -Wall -Wextra \
 	    -falign-functions=16 -fomit-frame-pointer \
 	    $(GCC_DIAG)
 endif
 
-ifeq ($(USE_OPT),)
-  USE_OPT =  -Ofast  -flto  -Wall -Wextra \
-	    -falign-functions=16 -fomit-frame-pointer \
-	     $(GCC_DIAG)
-endif
+
 
 
 # C specific options here (added to USE_OPT).

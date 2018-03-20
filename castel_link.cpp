@@ -149,15 +149,8 @@ void castelLinkStart(void)
 
 
   gptStart(&GPTD6, &gpt6cfg);
-
   pwmStart(&CASTELLINK::PWM, &pwmcfg);
-  castelLinkSetDuty(0);
-  pwmEnablePeriodicNotification(&CASTELLINK::PWM);
-
-
-  
   icuStart(&CASTELLINK::ICU, &icucfg);
-
   sdStart(&CASTELLINK::SD_TELEMETRY, &hostcfg);
 
   simpleMsgBind (CASTELLINK::STREAM_TELEMETRY_PTR, telemetryReceive_cb, nullptr);
@@ -174,6 +167,8 @@ void castelLinkSetDuty(uint16_t dutyPerTenThousand)
 		     castelDuty + CASTELLINK::HIGHZ_TIMESHIFT_TICKS);
     pwmEnableChannel(&CASTELLINK::PWM, CASTELLINK::PWM_PUSHPULL_CHANNEL,
 		     CASTELLINK::PUSHPULL_DUTY_TICKS);
+
+    pwmEnablePeriodicNotification(&CASTELLINK::PWM);
     pwmEnableChannelNotification(&CASTELLINK::PWM, CASTELLINK::PWM_COMMAND_CHANNEL);
     pwmEnableChannelNotification(&CASTELLINK::PWM, CASTELLINK::PWM_HIGHZ_CHANNEL);
     pwmEnableChannelNotification(&CASTELLINK::PWM, CASTELLINK::PWM_PUSHPULL_CHANNEL);
@@ -329,11 +324,11 @@ void castelLinkData::convertValues(void)
   }
 
   if (temp_NTC == true) {
-    const float val = ((raw->get_temp_ntc_or_cal() - cal_coeff_0) / cal_coeff_1) * scale_coeffs[10];
+    const float val = ((raw->get_temp_ntc_or_cal() - cal_coeff_0) / cal_coeff_1) * scale_coeffs[9];
     const float r0 = 10000;
     const float r2 = 10200;
     const float b = 3455;
-    //    temperature = (1.0 / logf(val*r2/(255.0-val)/r0) / b + (1/298.0)) - 273;
+    // from castel link live protocol documentation
     temperature = 1.0 / (logf(val*r2/(255.0-val)/r0) / b + 1/298.0) - 273;
   }
 }
@@ -464,7 +459,7 @@ static void sendTelemetryThd (void *arg)
 {
   (void)arg;
   chRegSetThreadName("telemetry");
-  castelLinkRawData *rawData;
+  castelLinkRawData *rawData=nullptr;
   
   while (true) {
     chFifoReceiveObjectTimeout(&raw_fifo, reinterpret_cast<void **> (&rawData),  TIME_INFINITE);
@@ -512,7 +507,7 @@ static void initPulse_cb(PWMDriver *pwmp)
     2000, // bec volt
     5000, // bec current
     500,  // cal
-    2500  // temp
+    600  // temp
   };
 
 
@@ -535,12 +530,12 @@ static void initPulse_cb(PWMDriver *pwmp)
 static void gpt6_cb(GPTDriver *gptp)
 {
   (void) gptp;
-  chSysLockFromISR();
   if (palReadLine(LINE_TEST_PULSE) == PAL_HIGH) {
     palClearLine(LINE_TEST_PULSE);
+    chSysLockFromISR();
     gptStartOneShotI(&GPTD6, 10);
+    chSysUnlockFromISR();
   } else {
     palSetLine(LINE_TEST_PULSE);
   }
-  chSysUnlockFromISR();
 }
