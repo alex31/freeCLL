@@ -31,7 +31,7 @@ sub getSerial();
 sub generateGui();
 sub generatePanel ();
 sub generateOneServoFrame ($);
-sub labelEntryFrame ($$$$;$) ;
+sub labelLabelFrame ($$$$;$) ;
 sub fhbits(@);
 
 my $mw;
@@ -41,6 +41,17 @@ my %options;
 my %tkObject = (
     );
 
+my %varData = (
+	'bat_voltage' => 0,	
+	'ripple_voltage' => 0,	
+	'current' => 0,	
+	'throttle' => 0,	
+	'power' => 0,		
+	'rpm' => 0,		
+	'bec_voltage' => 0,	
+	'bec_current' => 0,	
+	'temperature' => 0,    
+    );
 
 
 
@@ -141,11 +152,18 @@ sub generateOneServoFrame ($) {
 
     $tkObject{"clinkScale"}->pack (-side => 'top', -anchor => 'n') ;
 
+    my $dataFrame = $frame->Frame (-bd => '1m', -relief => 'sunken');
+    $dataFrame->pack(-side => 'left', -anchor => 'w');
+
+    foreach my $varName (sort keys %varData) {
+	labelLabelFrame($dataFrame, "$varName = ", \ ($varData{$varName}), 'left', 10);
+    }
+
 }
 
 
 
-sub labelEntryFrame ($$$$;$)
+sub labelLabelFrame ($$$$;$)
 {
     my ($ef, $labelText, $textVar, $packDir, $width) = @_ ;
     
@@ -161,17 +179,16 @@ sub labelEntryFrame ($$$$;$)
     $width = 15 unless defined $width ;
     $frame = $ef->Frame ();
     $frame->pack (-side => $frameDir, -pady => '2m', -padx => '0m', 
-		  -fill => 'y', -anchor => 'w');
+		  -anchor => 'w', -fill => 'both', -expand => 'true');
     
     $label = $frame->Label (-text => $labelText);
     $label->pack (-side =>$packDir, -padx => '0m', -fill => 'y');
     
-    $entry = $frame->Entry (-width => $width, -relief => 'sunken',
+    $entry = $frame->Label (-width => $width, -relief => 'sunken',
 			    -bd => 2, -textvariable => $textVar,
-			    -font => "-adobe-courier-medium-r-*-*-14-*-*-*-*-*-iso8859-15",
-			    -exportselection => 'false') ;
+			    -font => "-adobe-courier-medium-r-*-*-14-*-*-*-*-*-iso8859-15") ;
     
-    $entry->pack (-side =>$packDir, -padx => '0m', -anchor => 'w');
+    $entry->pack (-side =>'right', -padx => '0m', -anchor => 'e');
     
     return $entry ;
 }
@@ -301,12 +318,18 @@ sub castelLinkMessageCb ($)
 {
     my ($bufferRef) = @_;
     my ($bat_voltage, $ripple_voltage, $current, $throttle, $power,		   
-	$rpm, $bec_voltage, $bec_current, $temperature, $channel) = unpack ('f9', $$bufferRef);
+	$rpm, $bec_voltage, $bec_current, $temperature, $channel) = unpack ('f9C', $$bufferRef);
 
 
-    say ("bat=$bat_voltage, riple=$ripple_voltage, current=$current, " . 
-    	 "throttle=$throttle, power=$power, rpm=$rpm, becV=$bec_voltage, " . 
-    	 "becC=$bec_current, temp=$temperature");
+    $varData{'bat_voltage'} = sprintf (".2f", $bat_voltage);
+    $varData{'ripple_voltage'} = sprintf (".2f", $ripple_voltage);
+    $varData{'current'} = sprintf (".2f", $current);  
+    $varData{'throttle'} = sprintf (".2f", $throttle);
+    $varData{'power'} = sprintf (".2f", $power);	      
+    $varData{'rpm'} = sprintf (".0f", $rpm);
+    $varData{'bec_voltage'} = sprintf (".2f", $bec_voltage);    
+    $varData{'bec_current'} = sprintf (".2f", $bec_current);
+    $varData{'temperature'} = sprintf (".1f", $$temperature);
 }
 
 

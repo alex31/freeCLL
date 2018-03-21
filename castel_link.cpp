@@ -394,7 +394,8 @@ void castelLinkData::convertValues(void)
 
 void castelLinkData::sendTelemetry(void) 
 {
-  simpleMsgSend(CASTELLINK::STREAM_TELEMETRY_PTR, reinterpret_cast<uint8_t *> (this), sizeof(*this)-sizeof(raw));
+  simpleMsgSend(CASTELLINK::STREAM_TELEMETRY_PTR, reinterpret_cast<uint8_t *> (this),
+		sizeof(datas) + sizeof(channel));
 }
 
 
