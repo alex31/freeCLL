@@ -180,7 +180,7 @@ void castelLinkStart(void)
 
 void castelLinkSetDuty(uint16_t dutyPerTenThousand)
 {
-  const pwmcnt_t castelDuty = PWM_PERCENTAGE_TO_WIDTH(&CASTELLINK::PWM, dutyPerTenThousand);
+  const pwmcnt_t castelDuty = dutyPerTenThousand;
 
   if (dutyPerTenThousand != 0) {
     pwmEnableChannel(&CASTELLINK::PWM, CASTELLINK::PWM_COMMAND_CHANNEL, castelDuty);
@@ -222,7 +222,14 @@ static void castelLinkSetDutyFromISR(uint16_t dutyPerTenThousand)
     pwmEnableChannelNotificationI(&CASTELLINK::PWM, CASTELLINK::PWM_COMMAND_CHANNEL);
     pwmEnableChannelNotificationI(&CASTELLINK::PWM, CASTELLINK::PWM_HIGHZ_CHANNEL);
     pwmEnableChannelNotificationI(&CASTELLINK::PWM, CASTELLINK::PWM_PUSHPULL_CHANNEL);
-  } else {
+    if constexpr (CASTELLINK::SHUTDOWN_WITHOUT_TELEMETRY_MS != 0) 
+		   chVTSetI(&vtTelemetry, TIME_MS2I(CASTELLINK::SHUTDOWN_WITHOUT_TELEMETRY_MS),
+			    [] (void *arg) {(void) arg;
+			      chSysLockFromISR();
+			      castelLinkSetDutyFromISR(0);
+			      chSysUnlockFromISR();
+			    },
+			    nullptr);  } else {
     pwmDisableChannelI(&CASTELLINK::PWM, CASTELLINK::PWM_COMMAND_CHANNEL);
     pwmDisableChannelI(&CASTELLINK::PWM, CASTELLINK::PWM_HIGHZ_CHANNEL);
     pwmDisableChannelI(&CASTELLINK::PWM, CASTELLINK::PWM_PUSHPULL_CHANNEL);
@@ -310,8 +317,7 @@ void castelLinkRawData::dbgTrace(void) const
 #                | |__| |  | (_| | \ |_   | (_| |        
 #                |_____/    \__,_|  \__|   \__,_|        
 */
-castelLinkData::castelLinkData() : raw{nullptr},
-				   bat_voltage{0},
+castelLinkData::castelLinkData() : bat_voltage{0},
 				   ripple_voltage{0},
 				   current{0},
 				   throttle{0},
@@ -320,23 +326,23 @@ castelLinkData::castelLinkData() : raw{nullptr},
 				   bec_voltage{0},
 				   bec_current{0},
 				   temperature{0},
-				   channel{0}
-				   
+				   channel{0},
+				   raw{nullptr}
 {
 }
 
 castelLinkData::castelLinkData(const castelLinkRawData* _raw,
-			       const uint8_t _channel) : raw{_raw},
-							bat_voltage{0},
-							ripple_voltage{0},
-							current{0},
-							throttle{0},
-							power{0},
-							rpm{0},
-							bec_voltage{0},
-							bec_current{0},
-							temperature{0},
-							channel{_channel}
+			       const uint8_t _channel) : bat_voltage{0},
+							 ripple_voltage{0},
+							 current{0},
+							 throttle{0},
+							 power{0},
+							 rpm{0},
+							 bec_voltage{0},
+							 bec_current{0},
+							 temperature{0},
+							 channel{_channel},
+							 raw{_raw}
 							
 {
   convertValues();
@@ -388,7 +394,7 @@ void castelLinkData::convertValues(void)
 
 void castelLinkData::sendTelemetry(void) 
 {
-  simpleMsgSend(CASTELLINK::STREAM_TELEMETRY_PTR, reinterpret_cast<uint8_t *> (this), sizeof(*this));
+  simpleMsgSend(CASTELLINK::STREAM_TELEMETRY_PTR, reinterpret_cast<uint8_t *> (this), sizeof(*this)-sizeof(raw));
 }
 
 
@@ -500,15 +506,6 @@ static void telemetryReceive_cb(const uint8_t *buffer, const size_t len,  void *
     switch (msg->msgId) {
     case PWM_ORDER :
       castelLinkSetDuty(msg->value[0]);
-      if constexpr (CASTELLINK::SHUTDOWN_WITHOUT_TELEMETRY_MS != 0) 
-		     chVTSetI(&vtTelemetry, TIME_MS2I(CASTELLINK::SHUTDOWN_WITHOUT_TELEMETRY_MS),
-			      [] (void *arg) {(void) arg;
-				chSysLockFromISR();
-				castelLinkSetDutyFromISR(0);
-				chSysUnlockFromISR();
-			      },
-			      nullptr);
-      break;
     case CALIBRATE : DebugTrace ("Calibrate not yet implemented"); break;
     }
   }

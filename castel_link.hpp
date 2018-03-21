@@ -67,25 +67,27 @@ private:
   void convertValues(void);
   
 private:
-  const castelLinkRawData* raw;
 
-  union {
-    struct {
-      float	bat_voltage;
-      float	ripple_voltage;
-      float	current;
-      float	throttle;
-      float	power;
-      float	rpm;
-      float	bec_voltage;
-      float	bec_current;
-      float	temperature;
+  struct {
+    union {
+      struct {
+	float	bat_voltage;
+	float	ripple_voltage;
+	float	current;
+	float	throttle;
+	float	power;
+	float	rpm;
+	float	bec_voltage;
+	float	bec_current;
+	float	temperature;             
+      };
+      std::array<float, 9> datas;
     };
-    std::array<float, 9> datas;
-  };
-  uint8_t	channel;
-
-};
+    uint8_t	channel;
+  } __attribute__((packed));
+  
+  const castelLinkRawData* raw;
+};  
 
   
 void castelLinkStart(void);
