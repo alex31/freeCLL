@@ -201,7 +201,7 @@
 /*
  * SERIAL driver system settings.
  */
-#define STM32_SERIAL_USE_USART1             TRUE
+#define STM32_SERIAL_USE_USART1             FALSE
 #define STM32_SERIAL_USE_USART2             TRUE
 #define STM32_SERIAL_USE_LPUART1            FALSE
 #define STM32_SERIAL_USART1_PRIORITY        12

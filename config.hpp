@@ -78,7 +78,7 @@ namespace CASTELLINK {
   static inline constexpr uint32_t	ICU_MAXPULSE_US  = 6000;
 
   // to put telemetry on serial over usb, disable TRACE and choose SD2
-  static inline constexpr SerialDriver&	SD_TELEMETRY    = SD1;
+  static inline constexpr SerialDriver&	SD_TELEMETRY    = SD2;
   static inline constexpr uint32_t	TELEMETRY_BAUD  = 115200U;
 
   // in absence uplink message on serial link, engine is stop
