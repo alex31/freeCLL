@@ -83,9 +83,8 @@ private:
       };
       std::array<float, 9> datas;
     };
-    uint8_t	channel;
-  } __attribute__((packed));
-  
+    uint32_t	channel;
+  };
   const castelLinkRawData* raw;
 };  
 

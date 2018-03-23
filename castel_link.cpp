@@ -322,33 +322,16 @@ void castelLinkRawData::dbgTrace(void) const
 #                | |__| |  | (_| | \ |_   | (_| |        
 #                |_____/    \__,_|  \__|   \__,_|        
 */
-castelLinkData::castelLinkData() : bat_voltage{0},
-				   ripple_voltage{0},
-				   current{0},
-				   throttle{0},
-				   power{0},
-				   rpm{0},
-				   bec_voltage{0},
-				   bec_current{0},
-				   temperature{0},
+castelLinkData::castelLinkData() : datas{0},
 				   channel{0},
 				   raw{nullptr}
 {
 }
 
 castelLinkData::castelLinkData(const castelLinkRawData* _raw,
-			       const uint8_t _channel) : bat_voltage{0},
-							 ripple_voltage{0},
-							 current{0},
-							 throttle{0},
-							 power{0},
-							 rpm{0},
-							 bec_voltage{0},
-							 bec_current{0},
-							 temperature{0},
+			       const uint8_t _channel) : 
 							 channel{_channel},
 							 raw{_raw}
-							
 {
   convertValues();
 }
