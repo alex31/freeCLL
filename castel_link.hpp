@@ -4,6 +4,10 @@
 #include <array>
 
 
+namespace CASTELLINK {
+  static inline constexpr int16_t	PWM_DISABLE = -1;
+}
+
 class castelLinkRawData
 {
 public:
@@ -90,4 +94,4 @@ private:
 
   
 void castelLinkStart(void);
-void castelLinkSetDuty(uint16_t dutyPerTenThousand);
+void castelLinkSetDuty(int16_t dutyPerTenThousand);

@@ -24,14 +24,14 @@ typedef enum  : uint16_t {PWM_ORDER=0, CALIBRATE} MessageId;
 
 typedef struct {
   MessageId msgId;
-  uint16_t  value[2];
+  int16_t  value[2];
 } TelemetryDownMsg;
 
 /*
 #                 _ __                   _              _      _   _    _ __                 
 #                | '_ \                 | |            | |    | | | |  | '_ \                
 #                | |_) |  _ __    ___   | |_     ___   | |_   | |_| |  | |_) |   ___         
-#                | .__/  | '__|  / _ \  | __|   / _ \  | __|   \__, |  | .__/   / _ \        
+#   two_links             | .__/  | '__|  / _ \  | __|   / _ \  | __|   \__, |  | .__/   / _ \        
 #                | |     | |    | (_) | \ |_   | (_) | \ |_     __/ |  | |     |  __/        
 #                |_|     |_|     \___/   \__|   \___/   \__|   |___/   |_|      \___|        
 */
@@ -43,7 +43,7 @@ static void icuTimout_cb (ICUDriver *icud);
 static void sendTelemetryThd (void *arg);
 static void telemetryReceive_cb(const uint8_t *buffer, const size_t len,  void * const userData);
 static void initPulse_cb(PWMDriver *pwmp);
-static void castelLinkSetDutyFromISR(uint16_t dutyPerTenThousand);
+static void castelLinkSetDutyFromISR(int16_t dutyPerTenThousand);
 
 #if SELFTEST_PULSES_ENABLED
 static void gpt6_cb(GPTDriver *gptp);
@@ -181,11 +181,11 @@ void castelLinkStart(void)
 }
 
 
-void castelLinkSetDuty(uint16_t dutyPerTenThousand)
+void castelLinkSetDuty(int16_t dutyPerTenThousand)
 {
   const pwmcnt_t castelDuty = dutyPerTenThousand;
 
-  if (dutyPerTenThousand != 0) {
+  if (dutyPerTenThousand != CASTELLINK::PWM_DISABLE) {
     pwmEnableChannel(&CASTELLINK::PWM, CASTELLINK::PWM_COMMAND_CHANNEL, castelDuty);
     pwmEnableChannel(&CASTELLINK::PWM, CASTELLINK::PWM_HIGHZ_CHANNEL,
 		     castelDuty + CASTELLINK::HIGHZ_TIMESHIFT_TICKS);
@@ -202,7 +202,7 @@ void castelLinkSetDuty(uint16_t dutyPerTenThousand)
 		   chVTSet(&vtTelemetry, TIME_MS2I(CASTELLINK::SHUTDOWN_WITHOUT_TELEMETRY_MS),
 			   [] (void *arg) {(void) arg;
 			     chSysLockFromISR();
-			     castelLinkSetDutyFromISR(0);
+			     castelLinkSetDutyFromISR(CASTELLINK::PWM_DISABLE);
 			     chSysUnlockFromISR();
 			   },
 			   nullptr);
@@ -213,10 +213,10 @@ void castelLinkSetDuty(uint16_t dutyPerTenThousand)
   }
 }
 
-static void castelLinkSetDutyFromISR(uint16_t dutyPerTenThousand)
+static void castelLinkSetDutyFromISR(int16_t dutyPerTenThousand)
 {
   const pwmcnt_t castelDuty = PWM_PERCENTAGE_TO_WIDTH(&CASTELLINK::PWM, dutyPerTenThousand);
-  if (dutyPerTenThousand != 0) {
+  if (dutyPerTenThousand != CASTELLINK::PWM_DISABLE) {
     pwmEnableChannelI(&CASTELLINK::PWM, CASTELLINK::PWM_COMMAND_CHANNEL, castelDuty);
     pwmEnableChannelI(&CASTELLINK::PWM, CASTELLINK::PWM_HIGHZ_CHANNEL,
 		      castelDuty + CASTELLINK::HIGHZ_TIMESHIFT_TICKS);
@@ -231,7 +231,7 @@ static void castelLinkSetDutyFromISR(uint16_t dutyPerTenThousand)
 		   chVTSetI(&vtTelemetry, TIME_MS2I(CASTELLINK::SHUTDOWN_WITHOUT_TELEMETRY_MS),
 			    [] (void *arg) {(void) arg;
 			      chSysLockFromISR();
-			      castelLinkSetDutyFromISR(0);
+			      castelLinkSetDutyFromISR(CASTELLINK::PWM_DISABLE);
 			      chSysUnlockFromISR();
 			    },
 			    nullptr);  } else {
@@ -569,6 +569,7 @@ static void initPulse_cb(PWMDriver *pwmp)
 
 
   static uint32_t count =0;
+  static uint32_t noise =0;
   
   if (count == 11) {
     count = 0;
@@ -576,11 +577,12 @@ static void initPulse_cb(PWMDriver *pwmp)
   }
 
   chSysLockFromISR();
-
-  const uint32_t pulseDurationUs = pulses[count+1];
+  const bool addNoise = (count != 0) && (count != 9);
+  const uint32_t pulseDurationUs = pulses[count+1] + (addNoise ? noise++ : 0);
   gptStartOneShotI(&GPTD6, pulseDurationUs);
   gptStartOneShotI(&GPTD7, pulseDurationUs+10);
   count++;
+  noise = noise%500;
   chSysUnlockFromISR();
 #endif
 }
