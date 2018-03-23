@@ -9,6 +9,37 @@
 #include "config.hpp"
 #include "simpleSerialMessage.h"
 
+
+/*
+  TODO : 
+
+  +tableau de deux castelLinkRawData* (monter la taille de la FIFO à 8)
+   ° dans une structure avec aussi la line du PWM, le channel du PWM
+  +constexpr fonction qui retourne 0 pour ICUD2 et 1 pour ICUD15
+  +enum PulseSate {WAIT_FOR_PULSE, PULSE_ACQUIRED}
+
+  utiliser TIM1(6 cannaux) pour le pwm :
+         ° pwm1
+         ° pwm2
+         ° highZ1
+         ° highZ2
+         ° pushpull
+         ° disabled
+
+	 + ISR highZ : etat = WAIT_FOR_PULSE
+	 + ISR pushpull : si etat == WAIT_FOR_PULSE : resetIndex
+	 + ISR period : etat = PULSE_ACQUIRED
+
+         utiliser TIM2 et TIM15 pour l'ICU :
+         ° virer la CB sur overflow
+
+	 ° utiliser l'info canal dans les messages montants et descendants
+
+
+
+ */
+
+
 /*
 #                     _            __   _            _    _      _                          
 #                    | |          / _| (_)          (_)  | |    (_)                         
@@ -31,7 +62,7 @@ typedef struct {
 #                 _ __                   _              _      _   _    _ __                 
 #                | '_ \                 | |            | |    | | | |  | '_ \                
 #                | |_) |  _ __    ___   | |_     ___   | |_   | |_| |  | |_) |   ___         
-#   two_links             | .__/  | '__|  / _ \  | __|   / _ \  | __|   \__, |  | .__/   / _ \        
+#                | .__/  | '__|  / _ \  | __|   / _ \  | __|   \__, |  | .__/   / _ \        
 #                | |     | |    | (_) | \ |_   | (_) | \ |_     __/ |  | |     |  __/        
 #                |_|     |_|     \___/   \__|   \___/   \__|   |___/   |_|      \___|        
 */
