@@ -321,15 +321,16 @@ sub castelLinkMessageCb ($)
 	$rpm, $bec_voltage, $bec_current, $temperature, $channel) = unpack ('f9C', $$bufferRef);
 
 
-    $varData{'bat_voltage'} = sprintf (".2f", $bat_voltage);
-    $varData{'ripple_voltage'} = sprintf (".2f", $ripple_voltage);
-    $varData{'current'} = sprintf (".2f", $current);  
-    $varData{'throttle'} = sprintf (".2f", $throttle);
-    $varData{'power'} = sprintf (".2f", $power);	      
-    $varData{'rpm'} = sprintf (".0f", $rpm);
-    $varData{'bec_voltage'} = sprintf (".2f", $bec_voltage);    
-    $varData{'bec_current'} = sprintf (".2f", $bec_current);
-    $varData{'temperature'} = sprintf (".1f", $$temperature);
+    $varData{'bat_voltage'} = sprintf ("%.2f", $bat_voltage);
+    $varData{'ripple_voltage'} = sprintf ("%.2f", $ripple_voltage);
+    $varData{'current'} = sprintf ("%.2f", $current);  
+    $varData{'throttle'} = sprintf ("%.2f", $throttle);
+    $varData{'power'} = sprintf ("%.2f", $power);	      
+    $varData{'rpm'} = sprintf ("%.0f", $rpm);
+    $varData{'bec_voltage'} = sprintf ("%.2f", $bec_voltage);    
+    $varData{'bec_current'} = sprintf ("%.2f", $bec_current);
+    $varData{'temperature'} = sprintf ("%.1f", $temperature);
+    say '.';
 }
 
 
@@ -371,7 +372,7 @@ sub geneCastelLinkMsgsCB()
     my $shouldSend = $tkObject{clinkOn}; # should get what have been select by radio button
 
     my $rout;
-    while (select($rout=$selectReadBits, undef, undef, 0.010)) {
+    while (select($rout=$selectReadBits, undef, undef, 0.001)) {
 	serialCb();
     }
 
