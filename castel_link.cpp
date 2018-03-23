@@ -94,12 +94,15 @@ static constexpr PWMConfig pwmcfg = {
   .period    = CASTELLINK::TICK_PER_PERIOD,
   .callback  = &pwmStartIcu_cb,
   .channels  = {
+    [CASTELLINK::PWM_COMMAND_CHANNEL] =
     {.mode = PWM_OUTPUT_ACTIVE_LOW, .callback = &initPulse_cb}, // start pulse
+    [CASTELLINK::PWM_HIGHZ_CHANNEL] =
     {.mode = PWM_OUTPUT_DISABLED,   .callback = &pwmModeHighZ_cb},
+    [CASTELLINK::PWM_PUSHPULL_CHANNEL] =
     {.mode = PWM_OUTPUT_DISABLED,   .callback = &pwmModePushpull_cb},
-    {.mode = PWM_OUTPUT_DISABLED,   .callback = nullptr},
-    {.mode = PWM_OUTPUT_DISABLED,   .callback = nullptr},
-    {.mode = PWM_OUTPUT_DISABLED,   .callback = nullptr}
+    [3] = {.mode = PWM_OUTPUT_DISABLED,   .callback = nullptr},
+    [4] = {.mode = PWM_OUTPUT_DISABLED,   .callback = nullptr},
+    [5] = {.mode = PWM_OUTPUT_DISABLED,   .callback = nullptr}
   },
   .cr2  = 0,
   .dier = 0
@@ -190,7 +193,9 @@ void castelLinkSetDuty(uint16_t dutyPerTenThousand)
 		     CASTELLINK::PUSHPULL_DUTY_TICKS);
 
     pwmEnablePeriodicNotification(&CASTELLINK::PWM);
+#if SELFTEST_PULSES_ENABLED
     pwmEnableChannelNotification(&CASTELLINK::PWM, CASTELLINK::PWM_COMMAND_CHANNEL);
+#endif
     pwmEnableChannelNotification(&CASTELLINK::PWM, CASTELLINK::PWM_HIGHZ_CHANNEL);
     pwmEnableChannelNotification(&CASTELLINK::PWM, CASTELLINK::PWM_PUSHPULL_CHANNEL);
     if constexpr (CASTELLINK::SHUTDOWN_WITHOUT_TELEMETRY_MS != 0) 
@@ -577,7 +582,7 @@ static void initPulse_cb(PWMDriver *pwmp)
     500,  // cal
     600  // temp
   };
-#endif
+
 
 
   static uint32_t count =0;
@@ -589,13 +594,12 @@ static void initPulse_cb(PWMDriver *pwmp)
 
   chSysLockFromISR();
 
-#if SELFTEST_PULSES_ENABLED
   const uint32_t pulseDurationUs = pulses[count+1];
   gptStartOneShotI(&GPTD6, pulseDurationUs);
   gptStartOneShotI(&GPTD7, pulseDurationUs+10);
-#endif
   count++;
   chSysUnlockFromISR();
+#endif
 }
 
 #if SELFTEST_PULSES_ENABLED
