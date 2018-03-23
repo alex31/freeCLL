@@ -262,7 +262,7 @@ sub serialCb()
 	}
 	
 	when  (WAIT_FOR_PAYLOAD) {
-	    say ("len is $len");
+#	    say ("len is $len");
 	    $totLen = 0;
 	    do {
 		$totLen += sysread (FHD, $buffer, $len-$totLen, $totLen);
@@ -330,7 +330,7 @@ sub castelLinkMessageCb ($)
     $varData{'bec_voltage'} = sprintf ("%.2f", $bec_voltage);    
     $varData{'bec_current'} = sprintf ("%.2f", $bec_current);
     $varData{'temperature'} = sprintf ("%.1f", $temperature);
-    say ".$channel";
+#    say ".$channel";
 }
 
 
