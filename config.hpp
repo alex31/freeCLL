@@ -2,7 +2,8 @@
 
 #include <ch.h>
 #include <hal.h>
-
+#include "hal_stm32_lld_icu_opt.h"
+#include <utility>
 
 /*
  to enable self test pulse generation :
@@ -58,38 +59,19 @@ static inline constexpr uint32_t msec2rtc ( const uint32_t frequency, const uint
 	  static_cast<uint64_t> (usec)) / static_cast<uint64_t> (1e3);
 }
 
+
+struct PwmCoupledIcuParam {
+  const PWMDriver& pwmr;
+  const ICUDriver& icur;
+  const pwmchannel_t channel;
+};
+
+
+
+#include "user_config.hpp"
+
 namespace CASTELLINK {
-  // USER CONSTANTS
-  static inline constexpr PWMDriver&	PWM      = PWMD2;
-  static inline constexpr uint32_t	PWM_COMMAND_CHANNEL = 1_timChannel;
-  static inline constexpr uint32_t	PWM_HIGHZ_CHANNEL = 2_timChannel;
-  static inline constexpr uint32_t	PWM_PUSHPULL_CHANNEL = 3_timChannel;
-  static inline constexpr uint32_t	PWM_FREQ = 50_hz;
-  static inline constexpr uint32_t	TICK_PER_PERIOD = 20000;
-  static inline constexpr uint32_t	HIGHZ_TIMESHIFT_MICROSECONDS = 100;
-  static inline constexpr uint32_t	PUSHPULL_DUTY_MILLISECONDS = 14;
-
-  static inline constexpr ICUDriver&	ICU		 = ICUD1;
-  static inline constexpr icuchannel_t	ICU_CHANNEL      = ICU_CHANNEL_1;
-
-  // overflow after 8.2ms (frame start detection)
-  static inline constexpr uint32_t	ICU_TIMFREQ      = 8_mhz; 
-  static inline constexpr uint32_t	ICU_MINPULSE_US  = 400;
-  static inline constexpr uint32_t	ICU_MAXPULSE_US  = 6000;
-
-  // to put telemetry on serial over usb, disable TRACE and choose SD2
-  static inline constexpr SerialDriver&	SD_TELEMETRY    = SD2;
-  static inline constexpr uint32_t	TELEMETRY_BAUD  = 115200U;
-
-  // in absence uplink message on serial link, engine is stop
-  // disable test if 0
-  static inline constexpr uint32_t	SHUTDOWN_WITHOUT_TELEMETRY_MS  = 5000U;
-
-  static inline constexpr size_t	FIFO_SIZE    = 4;
-  
-
   // COMPUTED CONSTANTS, don't EDIT THIS SECTION until you know what you do
-  
   static inline constexpr uint32_t	TICK_FREQ = PWM_FREQ * TICK_PER_PERIOD;
   static inline constexpr uint32_t	HIGHZ_TIMESHIFT_TICKS = usec2rtc(TICK_FREQ, HIGHZ_TIMESHIFT_MICROSECONDS);
   static inline constexpr uint32_t	PUSHPULL_DUTY_TICKS = msec2rtc(TICK_FREQ, PUSHPULL_DUTY_MILLISECONDS);
@@ -98,10 +80,20 @@ namespace CASTELLINK {
   static constexpr BaseSequentialStream* STREAM_TELEMETRY_PTR = (BaseSequentialStream *) &SD_TELEMETRY;
 };
 
+
+
 #ifdef TRACE
  static inline constexpr bool	USE_SHELL    = true;
- static inline constexpr SerialDriver&	SD_SHELL        = SD2;  // wired on NUCLEO32
+ static inline constexpr SerialDriver&	SD_SHELL        = SD2;  // noy in userConfig since wired on NUCLEO32
  static constexpr BaseSequentialStream* STREAM_SHELL_PTR = (BaseSequentialStream *) &SD_SHELL;
 #else
  static inline constexpr bool	USE_SHELL    = false;
 #endif
+
+
+
+// using Item = std::pair<ICUDriver*, int>;
+// constexpr Item map_items[] = {
+//     { &ICUD1, 1 },
+//     { &ICUD15, 2 },
+// };
