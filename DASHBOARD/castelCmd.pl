@@ -262,7 +262,7 @@ sub serialCb()
 	}
 	
 	when  (WAIT_FOR_PAYLOAD) {
-	    say ("len is $len");
+#	    say ("len is $len");
 	    $totLen = 0;
 	    do {
 		$totLen += sysread (FHD, $buffer, $len-$totLen, $totLen);

@@ -33,7 +33,7 @@
 
 #define STM32L4xx_MCUCONF
 
-#define SELFTEST_PULSES_ENABLED		    TRUE
+#define SELFTEST_PULSES_ENABLED		    FALSE
 #define DEBUG_ASSERTS_ENABLED               TRUE
 
 /*
