@@ -160,7 +160,7 @@ CSRC = $(STARTUPSRC) \
        $(VARIOUS)/simpleSerialMessage.c \
        $(VARIOUS)/microrl/microrlShell.c \
        $(VARIOUS)/microrl/microrl.c \
-       $(VARIOUS)/hal_stm32_dma.c \
+       $(VARIOUS)/hal_stm32_lld_icu_opt.c \
        globalVar.c 
 
 

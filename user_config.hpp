@@ -3,17 +3,21 @@
 
 namespace CASTELLINK {
   // USER CONSTANTS
-  static inline constexpr PWMDriver&	PWM      = PWMD2;
-  static inline constexpr uint32_t	PWM_COMMAND_CHANNEL = 1_timChannel;
-  static inline constexpr uint32_t	PWM_HIGHZ_CHANNEL = 2_timChannel;
-  static inline constexpr uint32_t	PWM_PUSHPULL_CHANNEL = 3_timChannel;
+  static inline constexpr PWMDriver&	PWM      = PWMD1;
+  static inline constexpr uint32_t	PWM_COMMAND_CH_1 = 1_timChannel;
+  static inline constexpr uint32_t	PWM_HIGHZ_CH_1 = 2_timChannel;
+  static inline constexpr uint32_t	PWM_COMMAND_CH_2 = 3_timChannel;
+  static inline constexpr uint32_t	PWM_HIGHZ_CH_2 = 4_timChannel;
+  static inline constexpr uint32_t	PWM_PUSHPULL_CH1_2 = 5_timChannel;
   static inline constexpr uint32_t	PWM_FREQ = 50_hz;
   static inline constexpr uint32_t	TICK_PER_PERIOD = 20000;
   static inline constexpr uint32_t	HIGHZ_TIMESHIFT_MICROSECONDS = 100;
   static inline constexpr uint32_t	PUSHPULL_DUTY_MILLISECONDS = 14;
 
-  static inline constexpr ICUDriver&	ICU		 = ICUD1;
-  static inline constexpr icuchannel_t	ICU_CHANNEL      = ICU_CHANNEL_1;
+  static inline constexpr ICUDriver&	ICU1		 = ICUD2;
+  static inline constexpr ICUDriver&	ICU2		 = ICUD15;
+  static inline constexpr icuchannel_t	ICU1_CHANNEL      = ICU_CHANNEL_1;
+  static inline constexpr icuchannel_t	ICU2_CHANNEL      = ICU_CHANNEL_2;
 
   // overflow after 8.2ms (frame start detection)
   static inline constexpr uint32_t	ICU_TIMFREQ      = 8_mhz; 
@@ -28,7 +32,7 @@ namespace CASTELLINK {
   // disable test if 0
   static inline constexpr uint32_t	SHUTDOWN_WITHOUT_TELEMETRY_MS  = 5000U;
 
-  static inline constexpr size_t	FIFO_SIZE    = 4;
+  static inline constexpr size_t	FIFO_SIZE    = 8;
   
 };
 

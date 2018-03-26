@@ -34,7 +34,7 @@ private:
     };
     std::array <uint16_t, raw_len> raw;
   };
-
+  uint8_t channel;
 
 public:
   uint16_t	   get_calibration_1ms (void) const { return calibration_1ms; };
@@ -43,6 +43,8 @@ public:
   const  std::array <uint16_t, raw_len> &
 		   get_raw_ref	    (void) const { return raw; };
   size_t           get_raw_len	    (void) const { return raw_len;};
+  void     setChannel(const  uint8_t _channel)  {channel = _channel;};
+  uint8_t  getChannel(void)  {return channel;};
 };
 
 class castelLinkData
@@ -94,4 +96,4 @@ private:
 
   
 void castelLinkStart(void);
-void castelLinkSetDuty(int16_t dutyPerTenThousand);
+void castelLinkSetDuty(const uint8_t linkIdx, const int16_t dutyPerTenThousand);
