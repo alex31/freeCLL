@@ -215,7 +215,7 @@ void castelLinkSetDuty(int16_t dutyPerTenThousand)
 
 static void castelLinkSetDutyFromISR(int16_t dutyPerTenThousand)
 {
-  const pwmcnt_t castelDuty = PWM_PERCENTAGE_TO_WIDTH(&CASTELLINK::PWM, dutyPerTenThousand);
+  const pwmcnt_t castelDuty = dutyPerTenThousand;
   if (dutyPerTenThousand != CASTELLINK::PWM_DISABLE) {
     pwmEnableChannelI(&CASTELLINK::PWM, CASTELLINK::PWM_COMMAND_CHANNEL, castelDuty);
     pwmEnableChannelI(&CASTELLINK::PWM, CASTELLINK::PWM_HIGHZ_CHANNEL,
