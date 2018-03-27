@@ -33,7 +33,7 @@
 
 #define STM32L4xx_MCUCONF
 
-#define SELFTEST_PULSES_ENABLED		    TRUE
+#define SELFTEST_PULSES_ENABLED		    FALSE
 #define DEBUG_ASSERTS_ENABLED               TRUE
 
 /*
@@ -141,11 +141,10 @@
  */
 #define STM32_GPT_USE_TIM1                  FALSE
 #define STM32_GPT_USE_TIM2                  FALSE
-#ifdef SELFTEST_PULSES_ENABLED
 #define STM32_GPT_USE_TIM6                  TRUE
+#ifdef SELFTEST_PULSES_ENABLED
 #define STM32_GPT_USE_TIM7                  TRUE
 #else
-#define STM32_GPT_USE_TIM6                  FALSE
 #define STM32_GPT_USE_TIM7                  FALSE
 #endif
 #define STM32_GPT_USE_TIM15                 FALSE

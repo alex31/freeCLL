@@ -8,7 +8,6 @@ namespace CASTELLINK {
   static inline constexpr uint32_t	PWM_HIGHZ_CH_1 = 2_timChannel;
   static inline constexpr uint32_t	PWM_COMMAND_CH_2 = 3_timChannel;
   static inline constexpr uint32_t	PWM_HIGHZ_CH_2 = 4_timChannel;
-  static inline constexpr uint32_t	PWM_PUSHPULL_CH1_2 = 5_timChannel;
   static inline constexpr uint32_t	PWM_FREQ = 50_hz;
   static inline constexpr uint32_t	TICK_PER_PERIOD = 20000;
   static inline constexpr uint32_t	HIGHZ_TIMESHIFT_MICROSECONDS = 100;
@@ -18,6 +17,9 @@ namespace CASTELLINK {
   static inline constexpr ICUDriver&	ICU2		 = ICUD15;
   static inline constexpr icuchannel_t	ICU1_CHANNEL      = ICU_CHANNEL_1;
   static inline constexpr icuchannel_t	ICU2_CHANNEL      = ICU_CHANNEL_2;
+
+  static inline constexpr GPTDriver&	GPT_PUSHPULL	  = GPTD6;
+  static inline constexpr uint32_t	GPT_PP_FREQ       = 1_mhz;
 
   // overflow after 8.2ms (frame start detection)
   static inline constexpr uint32_t	ICU_TIMFREQ      = 8_mhz; 

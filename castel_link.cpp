@@ -104,7 +104,6 @@ static void telemetryReceive_cb(const uint8_t *buffer, const size_t len,  void *
 static void initPulse_cb(PWMDriver *pwmp);
 
 #if SELFTEST_PULSES_ENABLED
-static void gpt6_cb(GPTDriver *gptp);
 static void gpt7_cb(GPTDriver *gptp);
 #endif
 /*
@@ -160,8 +159,11 @@ static constexpr PWMConfig pwmcfg = {
   .period    = CASTELLINK::TICK_PER_PERIOD,
   .callback  = [] (PWMDriver *pwmd) {
     (void) pwmd;
+    chSysLockFromISR();
     currentLink[0].pwmStartIcu_cb();
     currentLink[1].pwmStartIcu_cb();
+    gptStartOneShotI(&CASTELLINK::GPT_PUSHPULL, CASTELLINK::PUSHPULL_TIMESHIFT_TICKS);
+    chSysUnlockFromISR();
   },
   .channels  = {
     [CASTELLINK::PWM_COMMAND_CH_1] =
@@ -170,7 +172,9 @@ static constexpr PWMConfig pwmcfg = {
     [CASTELLINK::PWM_HIGHZ_CH_1] =
     {.mode = PWM_OUTPUT_DISABLED,   .callback = [] (PWMDriver *pwmd) {
 	(void) pwmd;
+	chSysLockFromISR();
 	currentLink[0].pwmModeHiZ_cb();
+	chSysUnlockFromISR();
       }},
 
     [CASTELLINK::PWM_COMMAND_CH_2] =
@@ -179,16 +183,12 @@ static constexpr PWMConfig pwmcfg = {
     [CASTELLINK::PWM_HIGHZ_CH_2] =
     {.mode = PWM_OUTPUT_DISABLED,   .callback = [] (PWMDriver *pwmd) {
 	(void) pwmd;
+	chSysLockFromISR();
 	currentLink[1].pwmModeHiZ_cb();
+	chSysUnlockFromISR();
       }},
     
-    [CASTELLINK::PWM_PUSHPULL_CH1_2] =
-    {.mode = PWM_OUTPUT_DISABLED,   .callback = [] (PWMDriver *pwmd) {
-	(void) pwmd;
-	currentLink[0].pwmModePushpull_cb();
-	currentLink[1].pwmModePushpull_cb();
-      }},
-    
+    [4] = {.mode = PWM_OUTPUT_DISABLED,   .callback = nullptr},
     [5] = {.mode = PWM_OUTPUT_DISABLED,   .callback = nullptr}
   },
   .cr2  = 0,
@@ -201,7 +201,9 @@ static constexpr ICUConfig icu1cfg = {
   .frequency = CASTELLINK::ICU_TIMFREQ,
   .width_cb = [] (ICUDriver *icud) {
     (void) icud;
+    chSysLockFromISR();
     currentLink[0].icuWidth_cb();
+    chSysUnlockFromISR();
   },
   .period_cb = nullptr, 
   .overflow_cb = nullptr,
@@ -214,7 +216,9 @@ static constexpr ICUConfig icu2cfg = {
   .frequency = CASTELLINK::ICU_TIMFREQ,
   .width_cb = [] (ICUDriver *icud) {
     (void) icud;
+    chSysLockFromISR();
     currentLink[1].icuWidth_cb();
+    chSysUnlockFromISR();
   },
   .period_cb = nullptr, 
   .overflow_cb = nullptr,
@@ -223,17 +227,24 @@ static constexpr ICUConfig icu2cfg = {
 };
 
 
-
-#if SELFTEST_PULSES_ENABLED
 /*
- * GPT6 configuration.
+ * GPT pushpull configuration.
  */
-static constexpr GPTConfig gpt6cfg = {
-  static_cast<uint32_t>(1e6),    /* 1Mhz timer clock.  1000 ticks pour 1ms  */
-  &gpt6_cb,   
+static constexpr GPTConfig gptcfg = {
+  CASTELLINK::GPT_PP_FREQ,
+  [] (GPTDriver *gptp) {
+    (void) gptp;
+    chSysLockFromISR();
+    currentLink[0].pwmModePushpull_cb();
+    currentLink[1].pwmModePushpull_cb();
+    chSysUnlockFromISR();
+  },
   0,
   0
 };
+
+
+#if SELFTEST_PULSES_ENABLED
 
 /*
  * GPT7 configuration.
@@ -274,9 +285,9 @@ void castelLinkStart(void)
   currentLink[1].initFifoFetch();
 
 #if SELFTEST_PULSES_ENABLED
-  gptStart(&GPTD6, &gpt6cfg);
   gptStart(&GPTD7, &gpt7cfg);
 #endif
+  gptStart(&CASTELLINK::GPT_PUSHPULL, &gptcfg);
   pwmStart(&CASTELLINK::PWM, &pwmcfg);
   icuStart(&CASTELLINK::ICU1, &icu1cfg);
 
@@ -461,37 +472,28 @@ void LinkState::initFifoFetch(void)
 
 void LinkState::pwmStartIcu_cb(void)
 {
-  chSysLockFromISR();
   pulseState =  WAIT_FOR_PULSE;
   icuStartCaptureI(&icud);
   icuEnableNotificationsI(&icud);
-  chSysUnlockFromISR();
 }
 
 void LinkState::pwmModeHiZ_cb(void)
 {
-  chSysLockFromISR();
   pwmMaskChannelSide(&pwmd, pwmCmdCh, PWM_NORMAL, true);
-  chSysUnlockFromISR();
 }
 
 void LinkState::pwmModePushpull_cb(void)
 {
-  chSysLockFromISR();
-  
   pwmMaskChannelSide(&pwmd, pwmCmdCh, PWM_NORMAL, false);
   icuStopCaptureI(&icud);
   if ((pulseState ==  WAIT_FOR_PULSE) && currentRaw) {
     currentRaw->resetIndex();
   }
-  
-  chSysUnlockFromISR();
 }
 
 
 void LinkState::icuWidth_cb(void)
 {
-  chSysLockFromISR();
   const icucnt_t width = icuGetWidthX(&icud);
 
   if (currentRaw) {
@@ -507,8 +509,6 @@ void LinkState::icuWidth_cb(void)
     currentRaw = static_cast<castelLinkRawData *> (chFifoTakeObjectI(&raw_fifo));
     currentRaw->setChannel (index);
   }
-
-  chSysUnlockFromISR();
 }
 
 
@@ -520,15 +520,12 @@ void LinkState::setDuty(int16_t dutyPerTenThousand)
     pwmEnableChannel(&pwmd, pwmCmdCh, castelDuty);
     pwmEnableChannel(&pwmd, pwmCmdHiZ,
 		     castelDuty + CASTELLINK::HIGHZ_TIMESHIFT_TICKS);
-    pwmEnableChannel(&pwmd, CASTELLINK::PWM_PUSHPULL_CH1_2,
-		     CASTELLINK::PUSHPULL_DUTY_TICKS);
-    
+     
     pwmEnablePeriodicNotification(&pwmd);
 #if SELFTEST_PULSES_ENABLED
     pwmEnableChannelNotification(&pwmd, pwmCmdCh);
 #endif
     pwmEnableChannelNotification(&pwmd, pwmCmdHiZ);
-    pwmEnableChannelNotification(&pwmd, CASTELLINK::PWM_PUSHPULL_CH1_2);
   } else {
     pwmDisableChannel(&pwmd, pwmCmdCh);
     pwmDisableChannel(&pwmd, pwmCmdHiZ);
@@ -543,15 +540,13 @@ void LinkState::setDutyFromISR(int16_t dutyPerTenThousand)
     pwmEnableChannelI(&pwmd, pwmCmdCh, castelDuty);
     pwmEnableChannelI(&pwmd, pwmCmdHiZ,
 		     castelDuty + CASTELLINK::HIGHZ_TIMESHIFT_TICKS);
-    pwmEnableChannelI(&pwmd, CASTELLINK::PWM_PUSHPULL_CH1_2,
-		     CASTELLINK::PUSHPULL_DUTY_TICKS);
+   
     
     pwmEnablePeriodicNotificationI(&pwmd);
 #if SELFTEST_PULSES_ENABLED
     pwmEnableChannelNotificationI(&pwmd, pwmCmdCh);
 #endif
     pwmEnableChannelNotificationI(&pwmd, pwmCmdHiZ);
-    pwmEnableChannelNotificationI(&pwmd, CASTELLINK::PWM_PUSHPULL_CH1_2);
   } else {
     pwmDisableChannelI(&pwmd, pwmCmdCh);
     pwmDisableChannelI(&pwmd, pwmCmdHiZ);
@@ -676,12 +671,6 @@ static void initPulse_cb(PWMDriver *pwmp)
 }
 
 #if SELFTEST_PULSES_ENABLED
-static void gpt6_cb(GPTDriver *gptp)
-{
-  (void) gptp;
-    palClearLine(LINE_TEST_PULSE);
-}
-
 static void gpt7_cb(GPTDriver *gptp)
 {
   (void) gptp;

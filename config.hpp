@@ -74,7 +74,7 @@ namespace CASTELLINK {
   // COMPUTED CONSTANTS, don't EDIT THIS SECTION until you know what you do
   static inline constexpr uint32_t	TICK_FREQ = PWM_FREQ * TICK_PER_PERIOD;
   static inline constexpr uint32_t	HIGHZ_TIMESHIFT_TICKS = usec2rtc(TICK_FREQ, HIGHZ_TIMESHIFT_MICROSECONDS);
-  static inline constexpr uint32_t	PUSHPULL_DUTY_TICKS = msec2rtc(TICK_FREQ, PUSHPULL_DUTY_MILLISECONDS);
+  static inline constexpr uint32_t	PUSHPULL_TIMESHIFT_TICKS = msec2rtc(GPT_PP_FREQ, PUSHPULL_DUTY_MILLISECONDS);
   static inline constexpr uint32_t	ICU_MINPULSE_TICK      = usec2rtc(ICU_TIMFREQ, ICU_MINPULSE_US);
   static inline constexpr uint32_t	ICU_MAXPULSE_TICK      = usec2rtc(ICU_TIMFREQ, ICU_MAXPULSE_US);
   static constexpr BaseSequentialStream* STREAM_TELEMETRY_PTR = (BaseSequentialStream *) &SD_TELEMETRY;

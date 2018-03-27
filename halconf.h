@@ -71,14 +71,9 @@
  * @brief   Enables the GPT subsystem.
  */
 #if !defined(HAL_USE_GPT) || defined(__DOXYGEN__)
-#ifdef SELFTEST_PULSES_ENABLED
 #define HAL_USE_GPT          TRUE
-#else
-#define HAL_USE_GPT          FALSE
 #endif
 
-
-#endif
 
 /**
  * @brief   Enables the I2C subsystem.
