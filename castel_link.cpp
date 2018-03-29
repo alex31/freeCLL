@@ -13,28 +13,7 @@
 /*
   TODO : 
 
-  +tableau de deux castelLinkRawData* (monter la taille de la FIFO à 8)
-   ° dans une structure avec aussi la line du PWM, le channel du PWM
-  +constexpr fonction qui retourne 0 pour ICUD2 et 1 pour ICUD15
-  +enum PulseSate {WAIT_FOR_PULSE, PULSE_ACQUIRED}
-
-  utiliser TIM1(6 cannaux) pour le pwm :
-         ° pwm1
-         ° pwm2
-         ° highZ1
-         ° highZ2
-         ° pushpull
-         ° disabled
-
-	 + ISR highZ : etat = WAIT_FOR_PULSE
-	 + ISR pushpull : si etat == WAIT_FOR_PULSE : resetIndex
-	 + ISR period : etat = PULSE_ACQUIRED
-
-         utiliser TIM2 et TIM15 pour l'ICU :
-         ° virer la CB sur overflow
-
-	 ° utiliser l'info canal dans les messages montants et descendants
-
+ 
 
 
  */
@@ -119,6 +98,11 @@ static castelLinkRawData raw_pool[CASTELLINK::FIFO_SIZE];
 static msg_t msg_raw_fifo[CASTELLINK::FIFO_SIZE];
 static objects_fifo_t raw_fifo;
 static virtual_timer_t vtTelemetry;
+static inline void debugPulse (const ioline_t line) {
+  palSetLine(line);
+  chSysPolledDelayX(TIME_US2I(1));
+  palClearLine(line);
+}
 
 //static  castelLinkRawData * volatile currentRaw = nullptr;
 // LinkState	currentLink[2] {
@@ -126,9 +110,9 @@ static virtual_timer_t vtTelemetry;
 //   {CASTELLINK::PWM, CASTELLINK::PWM_COMMAND_CH_2, CASTELLINK::PWM_HIGHZ_CH_2}
 // };
 
-std::array<LinkState, 2>  currentLink {
+static std::array<LinkState, 2>  currentLink {
   LinkState{CASTELLINK::PWM, CASTELLINK::ICU1,
-	CASTELLINK::PWM_COMMAND_CH_1, CASTELLINK::PWM_HIGHZ_CH_1},
+      CASTELLINK::PWM_COMMAND_CH_1, CASTELLINK::PWM_HIGHZ_CH_1},
   LinkState{CASTELLINK::PWM, CASTELLINK::ICU1,
       CASTELLINK::PWM_COMMAND_CH_2, CASTELLINK::PWM_HIGHZ_CH_2}
 };
@@ -162,6 +146,7 @@ static constexpr PWMConfig pwmcfg = {
     chSysLockFromISR();
     currentLink[0].pwmStartIcu_cb();
     currentLink[1].pwmStartIcu_cb();
+    gptStopTimerI(&CASTELLINK::GPT_PUSHPULL);
     gptStartOneShotI(&CASTELLINK::GPT_PUSHPULL, CASTELLINK::PUSHPULL_TIMESHIFT_TICKS);
     chSysUnlockFromISR();
   },
@@ -313,7 +298,7 @@ void castelLinkSetDuty(const uint8_t linkId, const int16_t dutyPerTenThousand)
 			 [] (void *arg) {(void) arg;
 			   chSysLockFromISR();
 			   currentLink[0].setDutyFromISR(CASTELLINK::PWM_DISABLE);
-			   currentLink[2].setDutyFromISR(CASTELLINK::PWM_DISABLE);
+			   currentLink[1].setDutyFromISR(CASTELLINK::PWM_DISABLE);
 			   chSysUnlockFromISR();
 			 },
 			 nullptr);
@@ -495,7 +480,8 @@ void LinkState::pwmModePushpull_cb(void)
 void LinkState::icuWidth_cb(void)
 {
   const icucnt_t width = icuGetWidthX(&icud);
-
+  pulseState =PULSE_ACQUIRED;
+  
   if (currentRaw) {
     if (width >= CASTELLINK::ICU_MINPULSE_TICK && width <= CASTELLINK::ICU_MAXPULSE_TICK) {
       icuStopCaptureI(&icud);
@@ -662,7 +648,6 @@ static void initPulse_cb(PWMDriver *pwmp)
   chSysLockFromISR();
   const bool addNoise = (count != 0) && (count != 9);
   const uint32_t pulseDurationUs = pulses[count+1] + (addNoise ? noise++ : 0);
-  gptStartOneShotI(&GPTD6, pulseDurationUs);
   gptStartOneShotI(&GPTD7, pulseDurationUs+10);
   count++;
   noise = noise%500;
