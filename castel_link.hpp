@@ -47,6 +47,13 @@ public:
   uint8_t  getChannel(void)  {return channel;};
 };
 
+typedef enum  : uint16_t {PWM_ORDER=0, CALIBRATE} MessageId;
+typedef struct {
+  MessageId msgId;
+  int16_t  linkId;
+  int16_t  duty;
+} TelemetryDownMsg;
+
 class castelLinkData
 {
   static constexpr std::array<float, 10> scale_coeffs {

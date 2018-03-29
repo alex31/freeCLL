@@ -29,14 +29,8 @@
 */
 
 
-typedef enum  : uint16_t {PWM_ORDER=0, CALIBRATE} MessageId;
 typedef enum		 {WAIT_FOR_PULSE, PULSE_ACQUIRED} PulseSate;
 
-typedef struct {
-  MessageId msgId;
-  int16_t  linkId;
-  int16_t  duty;
-} TelemetryDownMsg;
 
 class LinkState
 {
@@ -104,16 +98,11 @@ static inline void debugPulse (const ioline_t line) {
   palClearLine(line);
 }
 
-//static  castelLinkRawData * volatile currentRaw = nullptr;
-// LinkState	currentLink[2] {
-//   {CASTELLINK::PWM, CASTELLINK::PWM_COMMAND_CH_1, CASTELLINK::PWM_HIGHZ_CH_1},
-//   {CASTELLINK::PWM, CASTELLINK::PWM_COMMAND_CH_2, CASTELLINK::PWM_HIGHZ_CH_2}
-// };
 
 static std::array<LinkState, 2>  currentLink {
   LinkState{CASTELLINK::PWM, CASTELLINK::ICU1,
       CASTELLINK::PWM_COMMAND_CH_1, CASTELLINK::PWM_HIGHZ_CH_1},
-  LinkState{CASTELLINK::PWM, CASTELLINK::ICU1,
+  LinkState{CASTELLINK::PWM, CASTELLINK::ICU2,
       CASTELLINK::PWM_COMMAND_CH_2, CASTELLINK::PWM_HIGHZ_CH_2}
 };
 
@@ -458,6 +447,8 @@ void LinkState::initFifoFetch(void)
 void LinkState::pwmStartIcu_cb(void)
 {
   pulseState =  WAIT_FOR_PULSE;
+  debugPulse(LINE_DBG_LINEA01);
+
   icuStartCaptureI(&icud);
   icuEnableNotificationsI(&icud);
 }
@@ -480,7 +471,7 @@ void LinkState::pwmModePushpull_cb(void)
 void LinkState::icuWidth_cb(void)
 {
   const icucnt_t width = icuGetWidthX(&icud);
-  pulseState =PULSE_ACQUIRED;
+  pulseState = PULSE_ACQUIRED;
   
   if (currentRaw) {
     if (width >= CASTELLINK::ICU_MINPULSE_TICK && width <= CASTELLINK::ICU_MAXPULSE_TICK) {

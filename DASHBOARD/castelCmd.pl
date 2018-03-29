@@ -378,7 +378,7 @@ sub geneCastelLinkMsgsCB()
 
 #    say "$pwmInTenThousand";
     if ($shouldSend) {
-	my $buffer = pack ('SSS', (0, 0, $pwmInTenThousand));
+	my $buffer = pack ('SSS', (0, 1, $pwmInTenThousand));
 	simpleMsgSend(\$buffer);
     }
 
