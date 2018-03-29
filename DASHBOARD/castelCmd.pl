@@ -30,7 +30,7 @@ sub geneCastelLinkMsgsCB();
 sub getSerial();
 sub generateGui();
 sub generatePanel ();
-sub generateOneServoFrame ($);
+sub generateOneServoFrame ($$);
 sub labelLabelFrame ($$$$;$) ;
 sub fhbits(@);
 
@@ -39,9 +39,13 @@ my $mwf;
 
 my %options;
 my %tkObject = (
+    "clink0" => 0,
+    "clink1" => 0
     );
 
-my %varData = (
+
+my @varData = (
+    {
 	'bat_voltage' => 0,	
 	'ripple_voltage' => 0,	
 	'current' => 0,	
@@ -50,8 +54,19 @@ my %varData = (
 	'rpm' => 0,		
 	'bec_voltage' => 0,	
 	'bec_current' => 0,	
-	'temperature' => 0,    
-    );
+	'temperature' => 0,
+    }, {
+	'bat_voltage' => 0,	
+	'ripple_voltage' => 0,	
+	'current' => 0,	
+	'throttle' => 0,	
+	'power' => 0,		
+	'rpm' => 0,		
+	'bec_voltage' => 0,	
+	'bec_current' => 0,	
+	'temperature' => 0,
+   }
+);
 
 
 
@@ -121,11 +136,12 @@ sub generatePanel ()
 #  \__/\__/  |__| |____/  \_____/ |_____|   |__|   <_____/         
     my $dmxsFrame = $mwf->Frame ();
     $dmxsFrame->pack(-side => 'left', -anchor => 'w');
-    generateOneServoFrame($dmxsFrame);
+    generateOneServoFrame($dmxsFrame, 0);
+    generateOneServoFrame($dmxsFrame, 1);
 }
 
-sub generateOneServoFrame ($) {
-    my ($frame) =@_;
+sub generateOneServoFrame ($$) {
+    my ($frame, $escIdx) =@_;
  
     my $clinkFrame = $frame->Frame (-bd => '1m', -relief => 'sunken');
     $clinkFrame->pack(-side => 'left', -anchor => 'w');
@@ -137,26 +153,26 @@ sub generateOneServoFrame ($) {
     $scalabframe1->Checkbutton(
         -text     => 'On',
 	#	-state => 'disabled',
-        -variable => \ ($tkObject{"clinkOn"}),
+        -variable => \ ($tkObject{"clinkOn${escIdx}"}),
 	-relief   => 'flat')->pack (-side => 'left', -anchor => 'n') ;
-    $tkObject{"clinkOn"} = 1;
+    $tkObject{"clinkOn${escIdx}"} = 1;
     
-    $tkObject{"clinkScale"} = $scalabframe1->Scale (
+    $tkObject{"clinkScale${escIdx}"} = $scalabframe1->Scale (
 	'-orient' => 'vertical', '-length' => 600, 
 	'-from' => 100, '-to' => 0,
 	'-resolution' => 1,
-	'-variable' => \ ($tkObject{"clink"}),
+	'-variable' => \ ($tkObject{"clink${escIdx}"}),
 	'-background' => 'lightgreen',
 	'-sliderlength' => 20,
 	'-sliderrelief' => 'solid');
 
-    $tkObject{"clinkScale"}->pack (-side => 'top', -anchor => 'n') ;
+    $tkObject{"clinkScale${escIdx}"}->pack (-side => 'top', -anchor => 'n') ;
 
     my $dataFrame = $frame->Frame (-bd => '1m', -relief => 'sunken');
     $dataFrame->pack(-side => 'left', -anchor => 'w');
 
-    foreach my $varName (sort keys %varData) {
-	labelLabelFrame($dataFrame, "$varName = ", \ ($varData{$varName}), 'left', 10);
+    foreach my $varName (sort keys %{$varData[$escIdx]}) {
+	labelLabelFrame($dataFrame, "$varName = ", \ ($varData[$escIdx]->{$varName}), 'left', 10);
     }
 
 }
@@ -321,16 +337,16 @@ sub castelLinkMessageCb ($)
 	$rpm, $bec_voltage, $bec_current, $temperature, $channel) = unpack ('f9L', $$bufferRef);
 
 
-    $varData{'bat_voltage'} = sprintf ("%.2f", $bat_voltage);
-    $varData{'ripple_voltage'} = sprintf ("%.2f", $ripple_voltage);
-    $varData{'current'} = sprintf ("%.2f", $current);  
-    $varData{'throttle'} = sprintf ("%.2f", $throttle);
-    $varData{'power'} = sprintf ("%.2f", $power);	      
-    $varData{'rpm'} = sprintf ("%.0f", $rpm);
-    $varData{'bec_voltage'} = sprintf ("%.2f", $bec_voltage);    
-    $varData{'bec_current'} = sprintf ("%.2f", $bec_current);
-    $varData{'temperature'} = sprintf ("%.1f", $temperature);
-#    say ".$channel";
+    $varData[$channel]->{'bat_voltage'} = sprintf ("%.2f", $bat_voltage);
+    $varData[$channel]->{'ripple_voltage'} = sprintf ("%.2f", $ripple_voltage);
+    $varData[$channel]->{'current'} = sprintf ("%.2f", $current);  
+    $varData[$channel]->{'throttle'} = sprintf ("%.2f", $throttle);
+    $varData[$channel]->{'power'} = sprintf ("%.2f", $power);	      
+    $varData[$channel]->{'rpm'} = sprintf ("%.0f", $rpm);
+    $varData[$channel]->{'bec_voltage'} = sprintf ("%.2f", $bec_voltage);    
+    $varData[$channel]->{'bec_current'} = sprintf ("%.2f", $bec_current);
+    $varData[$channel]->{'temperature'} = sprintf ("%.1f", $temperature);
+    say ".$channel";
 }
 
 
@@ -366,22 +382,23 @@ sub getSerial()
 }
 
 
-sub geneCastelLinkMsgsCB()
+sub geneCastelLinkMsgsCB($)
 {
-    my $pwmInTenThousand = 1000+($tkObject{clink}*10); 
-    my $shouldSend = $tkObject{clinkOn}; # should get what have been select by radio button
-
-    my $rout;
-    while (select($rout=$selectReadBits, undef, undef, 0.001)) {
-	serialCb();
+    foreach my $escIdx (0,1) {
+	my $pwmInTenThousand = 1000+($tkObject{"clink${escIdx}"}*10); 
+	my $shouldSend = $tkObject{"clinkOn${escIdx}"}; # should get what have been select by radio button
+	
+	my $rout;
+	while (select($rout=$selectReadBits, undef, undef, 0.001)) {
+	    serialCb();
+	}
+	
+	#    say "$pwmInTenThousand";
+	if ($shouldSend) {
+	    my $buffer = pack ('SSS', (0, $escIdx, $pwmInTenThousand));
+	    simpleMsgSend(\$buffer);
+	}
     }
-
-#    say "$pwmInTenThousand";
-    if ($shouldSend) {
-	my $buffer = pack ('SSS', (0, 1, $pwmInTenThousand));
-	simpleMsgSend(\$buffer);
-    }
-
 }
 
 

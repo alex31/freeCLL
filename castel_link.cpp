@@ -364,19 +364,16 @@ castelLinkData::castelLinkData() : datas{0},
 {
 }
 
-castelLinkData::castelLinkData(const castelLinkRawData* _raw,
-			       const uint8_t _channel) : 
-							 channel{_channel},
+castelLinkData::castelLinkData(const castelLinkRawData* _raw) : 
 							 raw{_raw}
 {
   convertValues();
 }
 
 
-void castelLinkData::populate(const castelLinkRawData* _raw, const uint8_t _channel)
+void castelLinkData::populate(const castelLinkRawData* _raw)
 {
   raw = _raw;
-  channel = _channel;
   convertValues();
 }
 
@@ -396,6 +393,7 @@ void castelLinkData::convertValues(void)
   if (raw == nullptr)
     chSysHalt ("convertValues : raw  == nullptr");
 
+  channel = raw->getChannel();
   
   const float cal_coeff_0 = std::min(raw->get_temp_linear_or_cal(), raw->get_temp_ntc_or_cal());
   const float cal_coeff_1 = raw->get_calibration_1ms();
@@ -557,7 +555,7 @@ static void sendTelemetryThd (void *arg)
   
   while (true) {
     chFifoReceiveObjectTimeout(&raw_fifo, reinterpret_cast<void **> (&rawData),  TIME_INFINITE);
-    castelLinkData processedData(rawData, 0);
+    castelLinkData processedData(rawData);
     processedData.sendTelemetry();
     //    rawData->dbgTrace();
      processedData.dbgTrace();

@@ -44,7 +44,7 @@ public:
 		   get_raw_ref	    (void) const { return raw; };
   size_t           get_raw_len	    (void) const { return raw_len;};
   void     setChannel(const  uint8_t _channel)  {channel = _channel;};
-  uint8_t  getChannel(void)  {return channel;};
+  uint8_t  getChannel(void)  const {return channel;};
 };
 
 typedef enum  : uint16_t {PWM_ORDER=0, CALIBRATE} MessageId;
@@ -71,9 +71,9 @@ class castelLinkData
   
 public:
   castelLinkData();
-  castelLinkData(const castelLinkRawData* _raw, const uint8_t _channel);
+  castelLinkData(const castelLinkRawData* _raw);
   void  sendTelemetry(void);
-  void populate(const castelLinkRawData* _raw, const uint8_t _channel);
+  void populate(const castelLinkRawData* _raw);
   void dbgTrace(void) const ;
   
 private:
