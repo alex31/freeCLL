@@ -6,9 +6,6 @@
 #include <utility>
 
 /*
- to enable self test pulse generation :
-	search SELFTEST_PULSES_ENABLED in mcuconf.h
-
  to enable  chibios internal tests and debug assert :
 	search DEBUG_ASSERTS_ENABLED in mcuconf.h
 

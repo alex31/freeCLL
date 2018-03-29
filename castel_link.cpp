@@ -74,11 +74,7 @@ private:
 */
 static void sendTelemetryThd (void *arg);
 static void telemetryReceive_cb(const uint8_t *buffer, const size_t len,  void * const userData);
-static void initPulse_cb(PWMDriver *pwmp);
 
-#if SELFTEST_PULSES_ENABLED
-static void gpt7_cb(GPTDriver *gptp);
-#endif
 /*
 #                  __ _   _            _               _          
 #                 / _` | | |          | |             | |         
@@ -92,11 +88,18 @@ static castelLinkRawData raw_pool[CASTELLINK::FIFO_SIZE];
 static msg_t msg_raw_fifo[CASTELLINK::FIFO_SIZE];
 static objects_fifo_t raw_fifo;
 static virtual_timer_t vtTelemetry;
+
+// helper function to help debug with Logic Analyser
 static inline void debugPulse (const ioline_t line) {
+#ifdef TRACE
   palSetLine(line);
   chSysPolledDelayX(TIME_US2I(1));
   palClearLine(line);
+#else
+  (void) line;
+#endif
 }
+
 
 
 static std::array<LinkState, 2>  currentLink {
@@ -141,7 +144,7 @@ static constexpr PWMConfig pwmcfg = {
   },
   .channels  = {
     [CASTELLINK::PWM_COMMAND_CH_1] =
-    {.mode = PWM_OUTPUT_ACTIVE_LOW, .callback = &initPulse_cb}, // debug pulse
+    {.mode = PWM_OUTPUT_ACTIVE_LOW, .callback = nullptr}, 
 
     [CASTELLINK::PWM_HIGHZ_CH_1] =
     {.mode = PWM_OUTPUT_DISABLED,   .callback = [] (PWMDriver *pwmd) {
@@ -218,20 +221,6 @@ static constexpr GPTConfig gptcfg = {
 };
 
 
-#if SELFTEST_PULSES_ENABLED
-
-/*
- * GPT7 configuration.
- */
-static constexpr GPTConfig gpt7cfg = {
-  static_cast<uint32_t>(1e6),    /* 1Mhz timer clock.  1000 ticks pour 1ms  */
-  &gpt7_cb,   
-  0,
-  0
-};
-#endif
-
-
  /*
 #                 _ __            _       _    _                 
 #                | '_ \          | |     | |  (_)                
@@ -258,9 +247,6 @@ void castelLinkStart(void)
   currentLink[0].initFifoFetch();
   currentLink[1].initFifoFetch();
 
-#if SELFTEST_PULSES_ENABLED
-  gptStart(&GPTD7, &gpt7cfg);
-#endif
   gptStart(&CASTELLINK::GPT_PUSHPULL, &gptcfg);
   pwmStart(&CASTELLINK::PWM, &pwmcfg);
   icuStart(&CASTELLINK::ICU1, &icu1cfg);
@@ -447,7 +433,6 @@ void LinkState::initFifoFetch(void)
 void LinkState::pwmStartIcu_cb(void)
 {
   pulseState =  WAIT_FOR_PULSE;
-  debugPulse(LINE_DBG_LINEA01);
 
   icuStartCaptureI(&icud);
   icuEnableNotificationsI(&icud);
@@ -499,9 +484,6 @@ void LinkState::setDuty(int16_t dutyPerTenThousand)
 		     castelDuty + CASTELLINK::HIGHZ_TIMESHIFT_TICKS);
      
     pwmEnablePeriodicNotification(&pwmd);
-#if SELFTEST_PULSES_ENABLED
-    pwmEnableChannelNotification(&pwmd, pwmCmdCh);
-#endif
     pwmEnableChannelNotification(&pwmd, pwmCmdHiZ);
   } else {
     pwmDisableChannel(&pwmd, pwmCmdCh);
@@ -520,9 +502,6 @@ void LinkState::setDutyFromISR(int16_t dutyPerTenThousand)
    
     
     pwmEnablePeriodicNotificationI(&pwmd);
-#if SELFTEST_PULSES_ENABLED
-    pwmEnableChannelNotificationI(&pwmd, pwmCmdCh);
-#endif
     pwmEnableChannelNotificationI(&pwmd, pwmCmdHiZ);
   } else {
     pwmDisableChannelI(&pwmd, pwmCmdCh);
@@ -585,73 +564,5 @@ static void sendTelemetryThd (void *arg)
     chFifoReturnObject(&raw_fifo, rawData);
   }
 }
-
-
-/*
-#                     _    _        __ _         
-#                    | |  | |      / _` |        
-#                  __| |  | |__   | (_| |        
-#                 / _` |  | '_ \   \__, |        
-#                | (_| |  | |_) |   __/ |        
-#                 \__,_|  |_.__/   |___/         
-#                               _     __         
-#                              | |   / _|        
-#                 ___     ___  | |  | |_         
-#                / __|   / _ \ | |  |  _|        
-#                \__ \  |  __/ | |  | |          
-#                |___/   \___| |_|  |_|          
-#                 _                    _            
-#                | |                  | |           
-#                | |_     ___   ___   | |_          
-#                | __|   / _ \ / __|  | __|         
-#                \ |_   |  __/ \__ \  \ |_          
-#                 \__|   \___| |___/   \__|         
-*/
-static void initPulse_cb(PWMDriver *pwmp)
-{
-  (void) pwmp;
-#if SELFTEST_PULSES_ENABLED
-  static constexpr uint32_t pulses[] = {
-    0,    // no pulse
-    1000, // calib
-    1500, // voltage
-    2000, // ripple
-    2000, // current
-    2000, // throttle
-    2000, // power
-    2000, // rpm
-    2000, // bec volt
-    5000, // bec current
-    500,  // cal
-    600  // temp
-  };
-
-
-
-  static uint32_t count =0;
-  static uint32_t noise =0;
-  
-  if (count == 11) {
-    count = 0;
-    return;
-  }
-
-  chSysLockFromISR();
-  const bool addNoise = (count != 0) && (count != 9);
-  const uint32_t pulseDurationUs = pulses[count+1] + (addNoise ? noise++ : 0);
-  gptStartOneShotI(&GPTD7, pulseDurationUs+10);
-  count++;
-  noise = noise%500;
-  chSysUnlockFromISR();
-#endif
-}
-
-#if SELFTEST_PULSES_ENABLED
-static void gpt7_cb(GPTDriver *gptp)
-{
-  (void) gptp;
-    palSetLine(LINE_TEST_PULSE);
-}
-#endif
 
 
