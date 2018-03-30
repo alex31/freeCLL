@@ -55,6 +55,10 @@ void _init_chibios() __attribute__ ((constructor(101)));
 void _init_chibios() {
   halInit();
   chSysInit();
+  // no official chibios support for TIM15
+  // TIM15 init has to be explicitely done
+  icu_opt_lld_init();
+
   initHeap();
 }
 

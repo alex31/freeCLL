@@ -89,13 +89,13 @@ static virtual_timer_t vtTelemetry;
 
 // helper function to help debug with Logic Analyser
 static inline void debugPulse (const ioline_t line) {
-  //#ifdef DEBUG_ASSERTS_ENABLED
+#ifdef DEBUG_ASSERTS_ENABLED
   palSetLine(line);
   chSysPolledDelayX(TIME_US2I(1));
   palClearLine(line);
-  //#else
+#else
   //  (void) line;
-  //#endif
+#endif
 }
 
 
@@ -116,7 +116,7 @@ static std::array<LinkState, 2>  escLinks {
 #                 \___|  \___/  |_| |_| |_|   |_|   |___/         
 */
 
-
+// serial link with computer host
 static constexpr SerialConfig  hostcfg =  {
   .speed = CASTELLINK::TELEMETRY_BAUD,
   .cr1 = 0,                                      // pas de parité
@@ -125,7 +125,21 @@ static constexpr SerialConfig  hostcfg =  {
 };
 
 
+/*
+° pwm used to drive 2 ESCs : 4 channels are used, 2 by ESC
+  foreach ESC, one channel for pwm generation, one channel to trig high impedance mode for pwm when
+  castel creation ESC drive the line
 
+° static configuration values are in user_config.hpp
+
+° start of pwm (common to all pwm since there are left aligned) ISR do :
+  + start input capture for get ESC telemetry
+  + start a timer to stop input capture and revert LINE from HiZ
+
+° pwm channel HiZ ISR set pwm channel in HiZ mode after the PWm signal as been pulled to high quickly by transistor
+  then only it is changed to HiZ
+
+*/
 static constexpr PWMConfig pwmcfg = {     
   .frequency = CASTELLINK::TICK_FREQ,
   .period    = CASTELLINK::TICK_PER_PERIOD,
@@ -168,7 +182,12 @@ static constexpr PWMConfig pwmcfg = {
   .dier = 0
 };
 
-
+/*
+  each ESC channel need a timer in ICU mode
+  after each period ISR, pulse is registered in a data structure
+  when data structure is full, message is sent so a thread which convert raw data
+  to decoded data, and theses datas are sent over serial link
+ */
 static constexpr ICUConfig icu1cfg = {
   .mode = ICU_INPUT_ACTIVE_HIGH,
   .frequency = CASTELLINK::ICU_TIMFREQ,
@@ -201,7 +220,8 @@ static constexpr ICUConfig icu2cfg = {
 
 
 /*
- * GPT pushpull configuration.
+  after a fixed time pwm channels which have bee poreviously passed in HiZ mode are returned in
+  pushpush mode
  */
 static constexpr GPTConfig gptcfg = {
   CASTELLINK::GPT_PP_FREQ,
@@ -248,15 +268,11 @@ void castelLinkStart(void)
   gptStart(&CASTELLINK::GPT_PUSHPULL, &gptcfg);
   pwmStart(&CASTELLINK::PWM, &pwmcfg);
   icuStart(&CASTELLINK::ICU1, &icu1cfg);
-
-  // no official chibios support
-  icu_opt_lld_init();
-  icuOptStart(&CASTELLINK::ICU2, &icu2cfg);
+  icuOptStart(&CASTELLINK::ICU2, &icu2cfg); // TIM15 cannot be start with official ChibiOS function
   
   sdStart(&CASTELLINK::SD_TELEMETRY, &hostcfg);
 
   simpleMsgBind (CASTELLINK::STREAM_TELEMETRY_PTR, telemetryReceive_cb, nullptr);
-  
 }
 
 
@@ -275,6 +291,8 @@ void castelLinkSetDuty(const uint8_t escIdx, const int16_t dutyPerTenThousand)
       // chVTReset is set here when  DEBUG_ASSERTS_ENABLED == FALSE as a work around, not a fix
       chVTReset(&vtTelemetry);
 #endif
+      // if serial link do not send any data for more than SHUTDOWN_WITHOUT_TELEMETRY_MS
+      // we shut down pwm (engine stop)
       chVTSet(&vtTelemetry, TIME_MS2I(CASTELLINK::SHUTDOWN_WITHOUT_TELEMETRY_MS),
 	      [] (void *arg) {(void) arg;
 		chSysLockFromISR();

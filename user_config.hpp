@@ -21,8 +21,8 @@ namespace CASTELLINK {
   static inline constexpr GPTDriver&	GPT_PUSHPULL	  = GPTD6;
   static inline constexpr uint32_t	GPT_PP_FREQ       = 1_mhz;
 
-  // overflow after 8.2ms (frame start detection)
-  static inline constexpr uint32_t	ICU_TIMFREQ      = 8_mhz; 
+  // overflow after 6.5ms (frame start detection)
+  static inline constexpr uint32_t	ICU_TIMFREQ      = 10_mhz; 
   static inline constexpr uint32_t	ICU_MINPULSE_US  = 400;
   static inline constexpr uint32_t	ICU_MAXPULSE_US  = 6000;
 
