@@ -165,9 +165,7 @@ static constexpr PWMConfig pwmcfg = {
 	chSysUnlockFromISR();
       }},
 
-    [CASTELLINK::PWM_COMMAND_CH_2] =
-    {.mode = PWM_OUTPUT_ACTIVE_LOW,   .callback = nullptr},
-
+    
     [CASTELLINK::PWM_HIGHZ_CH_2] =
     {.mode = PWM_OUTPUT_DISABLED,   .callback = [] (PWMDriver *pwmd) {
 	(void) pwmd;
@@ -176,6 +174,9 @@ static constexpr PWMConfig pwmcfg = {
 	chSysUnlockFromISR();
       }},
     
+    [CASTELLINK::PWM_COMMAND_CH_2] =
+    {.mode = PWM_OUTPUT_ACTIVE_LOW,   .callback = nullptr},
+
     [4] = {.mode = PWM_OUTPUT_DISABLED,   .callback = nullptr},
     [5] = {.mode = PWM_OUTPUT_DISABLED,   .callback = nullptr}
   },

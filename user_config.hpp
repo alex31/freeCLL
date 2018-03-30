@@ -6,8 +6,8 @@ namespace CASTELLINK {
   static inline constexpr PWMDriver&	PWM      = PWMD1;
   static inline constexpr uint32_t	PWM_COMMAND_CH_1 = 1_timChannel;
   static inline constexpr uint32_t	PWM_HIGHZ_CH_1 = 2_timChannel;
-  static inline constexpr uint32_t	PWM_COMMAND_CH_2 = 3_timChannel;
-  static inline constexpr uint32_t	PWM_HIGHZ_CH_2 = 4_timChannel;
+  static inline constexpr uint32_t	PWM_HIGHZ_CH_2 = 3_timChannel;
+  static inline constexpr uint32_t	PWM_COMMAND_CH_2 = 4_timChannel;
   static inline constexpr uint32_t	PWM_FREQ = 50_hz;
   static inline constexpr uint32_t	TICK_PER_PERIOD = 20000;
   static inline constexpr uint32_t	HIGHZ_TIMESHIFT_MICROSECONDS = 100;
