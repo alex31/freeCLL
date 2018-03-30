@@ -40,7 +40,9 @@ my $mwf;
 my %options;
 my %tkObject = (
     "clink0" => 0,
-    "clink1" => 0
+    "clink1" => 0,
+    "clinkOn0" => 1,
+    "clinkOn1" => 1,
     );
 
 
@@ -155,12 +157,11 @@ sub generateOneServoFrame ($$) {
 	#	-state => 'disabled',
         -variable => \ ($tkObject{"clinkOn${escIdx}"}),
 	-relief   => 'flat')->pack (-side => 'left', -anchor => 'n') ;
-    $tkObject{"clinkOn${escIdx}"} = 1;
     
     $tkObject{"clinkScale${escIdx}"} = $scalabframe1->Scale (
 	'-orient' => 'vertical', '-length' => 600, 
 	'-from' => 100, '-to' => 0,
-	'-resolution' => 1,
+	'-resolution' => 0.5,
 	'-variable' => \ ($tkObject{"clink${escIdx}"}),
 	'-background' => 'lightgreen',
 	'-sliderlength' => 20,
@@ -346,7 +347,7 @@ sub castelLinkMessageCb ($)
     $varData[$channel]->{'bec_voltage'} = sprintf ("%.2f", $bec_voltage);    
     $varData[$channel]->{'bec_current'} = sprintf ("%.2f", $bec_current);
     $varData[$channel]->{'temperature'} = sprintf ("%.1f", $temperature);
-    say ".$channel";
+#    say ".$channel";
 }
 
 
@@ -386,18 +387,17 @@ sub geneCastelLinkMsgsCB($)
 {
     foreach my $escIdx (0,1) {
 	my $pwmInTenThousand = 1000+($tkObject{"clink${escIdx}"}*10); 
-	my $shouldSend = $tkObject{"clinkOn${escIdx}"}; # should get what have been select by radio button
+	my $active = $tkObject{"clinkOn${escIdx}"}; # should get what have been select by radio button
 	
 	my $rout;
 	while (select($rout=$selectReadBits, undef, undef, 0.001)) {
 	    serialCb();
 	}
 	
-	#    say "$pwmInTenThousand";
-	if ($shouldSend) {
-	    my $buffer = pack ('SSS', (0, $escIdx, $pwmInTenThousand));
-	    simpleMsgSend(\$buffer);
-	}
+	my $buffer = pack ('SSS', (0, $escIdx, $active ? $pwmInTenThousand: -1));
+	simpleMsgSend(\$buffer);
+	#	    say "DBG> [0, $escIdx, $pwmInTenThousand]"; 
+    
     }
 }
 

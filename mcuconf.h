@@ -33,7 +33,7 @@
 
 #define STM32L4xx_MCUCONF
 
-#define DEBUG_ASSERTS_ENABLED               FALSE
+#define DEBUG_ASSERTS_ENABLED               TRUE
 
 /*
  * HAL driver system settings.

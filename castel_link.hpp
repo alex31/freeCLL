@@ -34,7 +34,7 @@ private:
     };
     std::array <uint16_t, raw_len> raw;
   };
-  uint8_t channel;
+  uint8_t escIdx;
 
 public:
   uint16_t	   get_calibration_1ms (void) const { return calibration_1ms; };
@@ -43,14 +43,14 @@ public:
   const  std::array <uint16_t, raw_len> &
 		   get_raw_ref	    (void) const { return raw; };
   size_t           get_raw_len	    (void) const { return raw_len;};
-  void     setChannel(const  uint8_t _channel)  {channel = _channel;};
-  uint8_t  getChannel(void)  const {return channel;};
+  void     setEscIdx(const  uint8_t _escIdx)  {escIdx = _escIdx;};
+  uint8_t  getEscIdx(void)  const {return escIdx;};
 };
 
 typedef enum  : uint16_t {PWM_ORDER=0, CALIBRATE} MessageId;
 typedef struct {
   MessageId msgId;
-  int16_t  linkId;
+  int16_t  escIdx;
   int16_t  duty;
 } TelemetryDownMsg;
 
@@ -96,11 +96,11 @@ private:
       };
       std::array<float, 9> datas;
     };
-    uint32_t	channel;
+    uint32_t	escIdx;
   };
   const castelLinkRawData* raw;
 };  
 
   
 void castelLinkStart(void);
-void castelLinkSetDuty(const uint8_t linkIdx, const int16_t dutyPerTenThousand);
+void castelLinkSetDuty(const uint8_t escIdx, const int16_t dutyPerTenThousand);

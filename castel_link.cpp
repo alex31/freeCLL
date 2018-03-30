@@ -38,8 +38,7 @@ public:
   LinkState(PWMDriver &_pwmd, ICUDriver &_icud,
 	    const uint32_t _pwmCmdCh, const uint32_t _pwmCmdHiZ) :
     currentRaw{nullptr}, pulseState{WAIT_FOR_PULSE}, pwmd{_pwmd}, icud(_icud),
-    pwmCmdCh{_pwmCmdCh}, pwmCmdHiZ{_pwmCmdHiZ}, index {indexer++} {};
-
+    pwmCmdCh{_pwmCmdCh}, pwmCmdHiZ{_pwmCmdHiZ}, escIdx {indexer++} {};
 
   void initFifoFetch(void);
   void pwmStartIcu_cb(void);
@@ -48,7 +47,6 @@ public:
   void icuWidth_cb(void);
   void setDuty(int16_t dutyPerTenThousand);
   void setDutyFromISR(int16_t dutyPerTenThousand);
-
 
 private:
   static uint8_t indexer;
@@ -60,7 +58,7 @@ private:
   const uint32_t  pwmCmdCh;
   const uint32_t  pwmCmdHiZ;
 
-  uint8_t	  index;
+  uint8_t	  escIdx;
 };
 
 
@@ -91,7 +89,7 @@ static virtual_timer_t vtTelemetry;
 
 // helper function to help debug with Logic Analyser
 static inline void debugPulse (const ioline_t line) {
-#ifdef TRACE
+#ifdef DEBUG_ASSERTS_ENABLED
   palSetLine(line);
   chSysPolledDelayX(TIME_US2I(1));
   palClearLine(line);
@@ -102,7 +100,7 @@ static inline void debugPulse (const ioline_t line) {
 
 
 
-static std::array<LinkState, 2>  currentLink {
+static std::array<LinkState, 2>  escLinks {
   LinkState{CASTELLINK::PWM, CASTELLINK::ICU1,
       CASTELLINK::PWM_COMMAND_CH_1, CASTELLINK::PWM_HIGHZ_CH_1},
   LinkState{CASTELLINK::PWM, CASTELLINK::ICU2,
@@ -117,8 +115,6 @@ static std::array<LinkState, 2>  currentLink {
 #                | (__  | (_) | | | | | | |   | |    __/ |        
 #                 \___|  \___/  |_| |_| |_|   |_|   |___/         
 */
-
-
 
 
 static constexpr SerialConfig  hostcfg =  {
@@ -136,8 +132,8 @@ static constexpr PWMConfig pwmcfg = {
   .callback  = [] (PWMDriver *pwmd) {
     (void) pwmd;
     chSysLockFromISR();
-    currentLink[0].pwmStartIcu_cb();
-    currentLink[1].pwmStartIcu_cb();
+    escLinks[0].pwmStartIcu_cb();
+    escLinks[1].pwmStartIcu_cb();
     gptStopTimerI(&CASTELLINK::GPT_PUSHPULL);
     gptStartOneShotI(&CASTELLINK::GPT_PUSHPULL, CASTELLINK::PUSHPULL_TIMESHIFT_TICKS);
     chSysUnlockFromISR();
@@ -150,7 +146,7 @@ static constexpr PWMConfig pwmcfg = {
     {.mode = PWM_OUTPUT_DISABLED,   .callback = [] (PWMDriver *pwmd) {
 	(void) pwmd;
 	chSysLockFromISR();
-	currentLink[0].pwmModeHiZ_cb();
+	escLinks[0].pwmModeHiZ_cb();
 	chSysUnlockFromISR();
       }},
 
@@ -161,7 +157,7 @@ static constexpr PWMConfig pwmcfg = {
     {.mode = PWM_OUTPUT_DISABLED,   .callback = [] (PWMDriver *pwmd) {
 	(void) pwmd;
 	chSysLockFromISR();
-	currentLink[1].pwmModeHiZ_cb();
+	escLinks[1].pwmModeHiZ_cb();
 	chSysUnlockFromISR();
       }},
     
@@ -179,7 +175,7 @@ static constexpr ICUConfig icu1cfg = {
   .width_cb = [] (ICUDriver *icud) {
     (void) icud;
     chSysLockFromISR();
-    currentLink[0].icuWidth_cb();
+    escLinks[0].icuWidth_cb();
     chSysUnlockFromISR();
   },
   .period_cb = nullptr, 
@@ -194,7 +190,7 @@ static constexpr ICUConfig icu2cfg = {
   .width_cb = [] (ICUDriver *icud) {
     (void) icud;
     chSysLockFromISR();
-    currentLink[1].icuWidth_cb();
+    escLinks[1].icuWidth_cb();
     chSysUnlockFromISR();
   },
   .period_cb = nullptr, 
@@ -212,8 +208,8 @@ static constexpr GPTConfig gptcfg = {
   [] (GPTDriver *gptp) {
     (void) gptp;
     chSysLockFromISR();
-    currentLink[0].pwmModePushpull_cb();
-    currentLink[1].pwmModePushpull_cb();
+    escLinks[0].pwmModePushpull_cb();
+    escLinks[1].pwmModePushpull_cb();
     chSysUnlockFromISR();
   },
   0,
@@ -244,8 +240,8 @@ void castelLinkStart(void)
 		    4,  raw_pool, msg_raw_fifo);
   chThdCreateStatic(waSendTelemetry, sizeof(waSendTelemetry), NORMALPRIO, &sendTelemetryThd, NULL);
   
-  currentLink[0].initFifoFetch();
-  currentLink[1].initFifoFetch();
+  escLinks[0].initFifoFetch();
+  escLinks[1].initFifoFetch();
 
   gptStart(&CASTELLINK::GPT_PUSHPULL, &gptcfg);
   pwmStart(&CASTELLINK::PWM, &pwmcfg);
@@ -262,18 +258,18 @@ void castelLinkStart(void)
 }
 
 
-void castelLinkSetDuty(const uint8_t linkId, const int16_t dutyPerTenThousand)
+void castelLinkSetDuty(const uint8_t escIdx, const int16_t dutyPerTenThousand)
 {
-  if (linkId < currentLink.size()) {
-    currentLink[linkId].setDuty(dutyPerTenThousand);
+  if (escIdx < escLinks.size()) {
+    escLinks[escIdx].setDuty(dutyPerTenThousand);
   }
 
   if constexpr (CASTELLINK::SHUTDOWN_WITHOUT_TELEMETRY_MS != 0) 
 		 chVTSet(&vtTelemetry, TIME_MS2I(CASTELLINK::SHUTDOWN_WITHOUT_TELEMETRY_MS),
 			 [] (void *arg) {(void) arg;
 			   chSysLockFromISR();
-			   currentLink[0].setDutyFromISR(CASTELLINK::PWM_DISABLE);
-			   currentLink[1].setDutyFromISR(CASTELLINK::PWM_DISABLE);
+			   escLinks[0].setDutyFromISR(CASTELLINK::PWM_DISABLE);
+			   escLinks[1].setDutyFromISR(CASTELLINK::PWM_DISABLE);
 			   chSysUnlockFromISR();
 			 },
 			 nullptr);
@@ -359,7 +355,7 @@ void castelLinkRawData::dbgTrace(void) const
 #                |_____/    \__,_|  \__|   \__,_|        
 */
 castelLinkData::castelLinkData() : datas{0},
-				   channel{0},
+				   escIdx{0},
 				   raw{nullptr}
 {
 }
@@ -393,7 +389,7 @@ void castelLinkData::convertValues(void)
   if (raw == nullptr)
     chSysHalt ("convertValues : raw  == nullptr");
 
-  channel = raw->getChannel();
+  escIdx = raw->getEscIdx();
   
   const float cal_coeff_0 = std::min(raw->get_temp_linear_or_cal(), raw->get_temp_ntc_or_cal());
   const float cal_coeff_1 = raw->get_calibration_1ms();
@@ -417,7 +413,7 @@ void castelLinkData::convertValues(void)
 void castelLinkData::sendTelemetry(void) 
 {
   simpleMsgSend(CASTELLINK::STREAM_TELEMETRY_PTR, reinterpret_cast<uint8_t *> (this),
-		sizeof(datas) + sizeof(channel));
+		sizeof(datas) + sizeof(escIdx));
 }
 
 uint8_t  LinkState::indexer = 0;
@@ -425,13 +421,14 @@ uint8_t  LinkState::indexer = 0;
 void LinkState::initFifoFetch(void)
 {
   currentRaw =  static_cast<castelLinkRawData *> (chFifoTakeObjectTimeout(&raw_fifo, TIME_IMMEDIATE));
-  currentRaw->setChannel (index);
+  currentRaw->setEscIdx (escIdx);
 }
 
 void LinkState::pwmStartIcu_cb(void)
 {
   pulseState =  WAIT_FOR_PULSE;
 
+  //  debugPulse(LINE_DBG_LINEA01);
   icuStartCaptureI(&icud);
   icuEnableNotificationsI(&icud);
 }
@@ -462,12 +459,12 @@ void LinkState::icuWidth_cb(void)
       if (currentRaw->push(width)) {
 	chFifoSendObjectI(&raw_fifo, currentRaw);
 	currentRaw =  static_cast<castelLinkRawData *> (chFifoTakeObjectI(&raw_fifo));
-	currentRaw->setChannel (index);
+	currentRaw->setEscIdx(escIdx);
       }
     }
   } else { // currentRaw == nullptr
     currentRaw = static_cast<castelLinkRawData *> (chFifoTakeObjectI(&raw_fifo));
-    currentRaw->setChannel (index);
+    currentRaw->setEscIdx(escIdx);
   }
 }
 
@@ -531,8 +528,10 @@ static void telemetryReceive_cb(const uint8_t *buffer, const size_t len,  void *
     const TelemetryDownMsg *msg = reinterpret_cast<const TelemetryDownMsg *> (buffer);
     switch (msg->msgId) {
     case PWM_ORDER :
-      castelLinkSetDuty(msg->linkId, msg->duty);
-    case CALIBRATE : DebugTrace ("Calibrate not yet implemented"); break;
+      castelLinkSetDuty(msg->escIdx, msg->duty);
+      break;
+    case CALIBRATE : DebugTrace ("Calibrate not yet implemented");
+      break;
     }
   }
 }
@@ -558,7 +557,7 @@ static void sendTelemetryThd (void *arg)
     castelLinkData processedData(rawData);
     processedData.sendTelemetry();
     //    rawData->dbgTrace();
-     processedData.dbgTrace();
+    processedData.dbgTrace();
     chFifoReturnObject(&raw_fifo, rawData);
   }
 }
