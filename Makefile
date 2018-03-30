@@ -22,7 +22,7 @@ endif
 
 
 ifeq ($(USE_OPT),)
-  USE_OPT =  -Ofast  -flto  -Wall -Wextra \
+  USE_OPT =  -Os  -flto  -Wall -Wextra \
 	    -falign-functions=16 -fomit-frame-pointer \
 	     $(GCC_DIAG)
 endif

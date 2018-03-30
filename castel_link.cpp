@@ -89,13 +89,13 @@ static virtual_timer_t vtTelemetry;
 
 // helper function to help debug with Logic Analyser
 static inline void debugPulse (const ioline_t line) {
-#ifdef DEBUG_ASSERTS_ENABLED
+  //#ifdef DEBUG_ASSERTS_ENABLED
   palSetLine(line);
   chSysPolledDelayX(TIME_US2I(1));
   palClearLine(line);
-#else
-  (void) line;
-#endif
+  //#else
+  //  (void) line;
+  //#endif
 }
 
 
@@ -236,10 +236,12 @@ static constexpr GPTConfig gptcfg = {
 
 void castelLinkStart(void)
 {
+  chVTObjectInit(&vtTelemetry);
   chFifoObjectInit (&raw_fifo, sizeof(castelLinkRawData), CASTELLINK::FIFO_SIZE,
 		    4,  raw_pool, msg_raw_fifo);
   chThdCreateStatic(waSendTelemetry, sizeof(waSendTelemetry), NORMALPRIO, &sendTelemetryThd, NULL);
-  
+
+
   escLinks[0].initFifoFetch();
   escLinks[1].initFifoFetch();
 
@@ -264,15 +266,25 @@ void castelLinkSetDuty(const uint8_t escIdx, const int16_t dutyPerTenThousand)
     escLinks[escIdx].setDuty(dutyPerTenThousand);
   }
 
-  if constexpr (CASTELLINK::SHUTDOWN_WITHOUT_TELEMETRY_MS != 0) 
-		 chVTSet(&vtTelemetry, TIME_MS2I(CASTELLINK::SHUTDOWN_WITHOUT_TELEMETRY_MS),
-			 [] (void *arg) {(void) arg;
-			   chSysLockFromISR();
-			   escLinks[0].setDutyFromISR(CASTELLINK::PWM_DISABLE);
-			   escLinks[1].setDutyFromISR(CASTELLINK::PWM_DISABLE);
-			   chSysUnlockFromISR();
-			 },
-			 nullptr);
+  //debugPulse(LINE_DBG_LINEA01);
+  if constexpr (CASTELLINK::SHUTDOWN_WITHOUT_TELEMETRY_MS != 0) {
+#if DEBUG_ASSERTS_ENABLED == FALSE
+      // should no be needed, perhaps BUGS here :
+      // works without chVTReset in all configurations but this one :
+      // compile with -Ofast and  CH_DBG_ENABLE_ASSERTS = FALSE
+      // chVTReset is set here when  DEBUG_ASSERTS_ENABLED == FALSE as a work around, not a fix
+      chVTReset(&vtTelemetry);
+#endif
+      chVTSet(&vtTelemetry, TIME_MS2I(CASTELLINK::SHUTDOWN_WITHOUT_TELEMETRY_MS),
+	      [] (void *arg) {(void) arg;
+		chSysLockFromISR();
+		//		debugPulse(LINE_DBG_LINEA06);
+		escLinks[0].setDutyFromISR(CASTELLINK::PWM_DISABLE);
+		escLinks[1].setDutyFromISR(CASTELLINK::PWM_DISABLE);
+		chSysUnlockFromISR();
+	      },
+	      nullptr);
+    }
 }
 
 

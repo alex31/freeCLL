@@ -33,7 +33,7 @@
 
 #define STM32L4xx_MCUCONF
 
-#define DEBUG_ASSERTS_ENABLED               TRUE
+#define DEBUG_ASSERTS_ENABLED               FALSE
 
 /*
  * HAL driver system settings.
@@ -46,7 +46,7 @@
 #define STM32_HSI48_ENABLED                 FALSE
 #define STM32_LSI_ENABLED                   TRUE
 #define STM32_HSE_ENABLED                   FALSE
-#define STM32_LSE_ENABLED                   TRUE
+#define STM32_LSE_ENABLED                    TRUE
 #define STM32_MSIPLL_ENABLED                TRUE
 #define STM32_ADC_CLOCK_ENABLED             TRUE
 #define STM32_USB_CLOCK_ENABLED             TRUE

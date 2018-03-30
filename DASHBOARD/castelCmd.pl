@@ -394,7 +394,7 @@ sub geneCastelLinkMsgsCB($)
 	    serialCb();
 	}
 	
-	my $buffer = pack ('SSS', (0, $escIdx, $active ? $pwmInTenThousand: -1));
+	my $buffer = pack ('sss', (0, $escIdx, $active ? $pwmInTenThousand: -1));
 	simpleMsgSend(\$buffer);
 	#	    say "DBG> [0, $escIdx, $pwmInTenThousand]"; 
     
