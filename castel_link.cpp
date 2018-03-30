@@ -46,8 +46,9 @@ public:
   void pwmModePushpull_cb(void);
   void icuWidth_cb(void);
   void setDuty(int16_t dutyPerTenThousand);
+  int16_t getDuty(void) const {return currentDuty;};
   void setDutyFromISR(int16_t dutyPerTenThousand);
-
+  
 private:
   static uint8_t indexer;
 
@@ -55,10 +56,10 @@ private:
   volatile PulseSate  pulseState;
   PWMDriver &pwmd;
   ICUDriver &icud;
-  const uint32_t  pwmCmdCh;
-  const uint32_t  pwmCmdHiZ;
-
-  uint8_t	  escIdx;
+  const uint32_t    pwmCmdCh;
+  const uint32_t    pwmCmdHiZ;
+  volatile pwmcnt_t currentDuty;
+  uint8_t	    escIdx;
 };
 
 
@@ -430,6 +431,16 @@ void castelLinkData::convertValues(void)
       datas[i] = ((raw->get_raw_ref()[i+1] - cal_coeff_0) / cal_coeff_1) * scale_coeffs[i];
   }
 
+
+  /*
+    ° attempt to make another correction between pwm pulse len and ESC measured pulse len
+    ° does not seem to bring anything good
+   */
+  // const float cal_coeff_2 = escLinks[raw->getEscIdx()].getDuty() / (throttle * 1000.0f);
+  // for (auto &v : datas) {
+  //   v *= cal_coeff_2;
+  // }
+  
   if (temp_NTC == true) {
     const float val = ((raw->get_temp_ntc_or_cal() - cal_coeff_0) / cal_coeff_1) * scale_coeffs[9];
     const float r0 = 10000;
@@ -499,11 +510,11 @@ void LinkState::icuWidth_cb(void)
 }
 
 
-void LinkState::setDuty(int16_t dutyPerTenThousand)
+void LinkState::setDuty(int16_t castelDuty)
 {
-  const pwmcnt_t castelDuty = dutyPerTenThousand;
+  currentDuty = castelDuty;
   
-  if (dutyPerTenThousand != CASTELLINK::PWM_DISABLE) {
+  if (castelDuty != CASTELLINK::PWM_DISABLE) {
     pwmEnableChannel(&pwmd, pwmCmdCh, castelDuty);
     pwmEnableChannel(&pwmd, pwmCmdHiZ,
 		     castelDuty + CASTELLINK::HIGHZ_TIMESHIFT_TICKS);
@@ -516,11 +527,11 @@ void LinkState::setDuty(int16_t dutyPerTenThousand)
   }
 }
   
-void LinkState::setDutyFromISR(int16_t dutyPerTenThousand)
+void LinkState::setDutyFromISR(int16_t castelDuty)
 {
-  const pwmcnt_t castelDuty = dutyPerTenThousand;
+  currentDuty = castelDuty;
   
-  if (dutyPerTenThousand != CASTELLINK::PWM_DISABLE) {
+  if (castelDuty != CASTELLINK::PWM_DISABLE) {
     pwmEnableChannelI(&pwmd, pwmCmdCh, castelDuty);
     pwmEnableChannelI(&pwmd, pwmCmdHiZ,
 		     castelDuty + CASTELLINK::HIGHZ_TIMESHIFT_TICKS);
