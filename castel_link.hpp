@@ -59,7 +59,7 @@ class castelLinkData
   static constexpr std::array<float, 10> scale_coeffs {
       20,
       4,
-      50,
+      22,
       1,
       0.2502,
       20416.7,
