@@ -156,7 +156,6 @@ CSRC = $(STARTUPSRC) \
        $(CHIBIOS)/os/various/syscalls.c \
        $(VARIOUS)/stdutil.c \
        $(VARIOUS)/printf.c \
-       $(VARIOUS)/rtcAccess.c \
        $(VARIOUS)/simpleSerialMessage.c \
        $(VARIOUS)/microrl/microrlShell.c \
        $(VARIOUS)/microrl/microrl.c \
@@ -168,6 +167,7 @@ CSRC = $(STARTUPSRC) \
 # setting.
 CPPSRC =               ttyConsole.cpp \
 		       castel_link.cpp \
+		       led_blink.cpp \
 		       main.cpp
 
 # C sources to be compiled in ARM mode regardless of the global setting.

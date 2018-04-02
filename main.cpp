@@ -5,6 +5,7 @@
 #include "config.hpp"
 #include "castel_link.hpp"
 #include "ttyConsole.hpp"
+#include "led_blink.hpp"
 
 
 /*
@@ -39,18 +40,6 @@
 
  */
 
-static THD_WORKING_AREA(waBlinker, 384);
-static void blinker (void *arg)
-{
-  (void)arg;
-  chRegSetThreadName("blinker");
-  while (true) {
-    palToggleLine(LINE_LED_GREEN);
-    chThdSleepMilliseconds(500);
-  }
-}
-
-
 void _init_chibios() __attribute__ ((constructor(101)));
 void _init_chibios() {
   halInit();
@@ -84,7 +73,6 @@ int main(void) {
 #endif
   
   
-  chThdCreateStatic(waBlinker, sizeof(waBlinker), NORMALPRIO, &blinker, NULL);
   castelLinkStart();
   
 

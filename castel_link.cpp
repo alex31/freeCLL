@@ -8,16 +8,7 @@
 #include "stdutil.h"
 #include "config.hpp"
 #include "simpleSerialMessage.h"
-
-
-/*
-  TODO : 
-
- 
-
-
- */
-
+#include "led_blink.hpp"
 
 /*
 #                     _            __   _            _    _      _                          
@@ -29,7 +20,7 @@
 */
 
 
-typedef enum		 {WAIT_FOR_PULSE, PULSE_ACQUIRED} PulseSate;
+typedef enum  {WAIT_FOR_PULSE, PULSE_ACQUIRED} PulseSate;
 
 
 class LinkState
@@ -274,7 +265,13 @@ void castelLinkStart(void)
   
   sdStart(&CASTELLINK::SD_TELEMETRY, &hostcfg);
 
-  simpleMsgBind (CASTELLINK::STREAM_TELEMETRY_PTR, telemetryReceive_cb, nullptr);
+  simpleMsgBind (CASTELLINK::STREAM_TELEMETRY_PTR, telemetryReceive_cb,
+		 [] (const uint32_t recCrc, const uint32_t calcCrc) {
+		   (void) recCrc;
+		   (void) calcCrc;
+		   ledBlink.setFlashes(3,0);
+		 },
+		 nullptr);
 }
 
 
@@ -282,8 +279,12 @@ void castelLinkSetDuty(const uint8_t escIdx, const int16_t dutyPerTenThousand)
 {
   if (escIdx < escLinks.size()) {
     escLinks[escIdx].setDuty(dutyPerTenThousand);
+    if ((dutyPerTenThousand < 1000) || (dutyPerTenThousand > 2000))
+      ledBlink.setFlashes(6,0);
+  } else {
+    ledBlink.setFlashes(6,0); 
   }
-
+  
   //debugPulse(LINE_DBG_LINEA01);
   if constexpr (CASTELLINK::SHUTDOWN_WITHOUT_TELEMETRY_MS != 0) {
 #if DEBUG_ASSERTS_ENABLED == FALSE
@@ -301,6 +302,7 @@ void castelLinkSetDuty(const uint8_t escIdx, const int16_t dutyPerTenThousand)
 		//		debugPulse(LINE_DBG_LINEA06);
 		escLinks[0].setDutyFromISR(CASTELLINK::PWM_DISABLE);
 		escLinks[1].setDutyFromISR(CASTELLINK::PWM_DISABLE);
+		ledBlink.setFlashes(2,0);
 		chSysUnlockFromISR();
 	      },
 	      nullptr);
@@ -566,6 +568,7 @@ static void telemetryReceive_cb(const uint8_t *buffer, const size_t len,  void *
 
   if (len != sizeof(TelemetryDownMsg)) {
     DebugTrace ("Msg len error : rec %u instead of waited %u", len, sizeof(TelemetryDownMsg));
+    ledBlink.setFlashes(4,0);
   } else {
     const TelemetryDownMsg *msg = reinterpret_cast<const TelemetryDownMsg *> (buffer);
     switch (msg->msgId) {
@@ -573,6 +576,10 @@ static void telemetryReceive_cb(const uint8_t *buffer, const size_t len,  void *
       castelLinkSetDuty(msg->escIdx, msg->duty);
       break;
     case CALIBRATE : DebugTrace ("Calibrate not yet implemented");
+      ledBlink.setFlashes(5,0);
+      break;
+    default : DebugTrace ("message not yet implemented");
+      ledBlink.setFlashes(5,0);
       break;
     }
   }
