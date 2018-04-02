@@ -7,7 +7,7 @@
 #include <strings.h>
 #endif
 
-LedBlink ledBlink(LINE_LED_GREEN, 1000, 0, 200);
+LedBlink ledBlink(LINE_LED_GREEN, 800, 0, 200);
 
 uint8_t LedBlink::indexer = 0;
 
@@ -38,13 +38,17 @@ _Noreturn void LedBlink::thdBlinkLed (void) const
       chThdSleepMilliseconds(msBetweenFlashes);
     }
     palClearLine(ledLine);
-    chThdSleepMilliseconds(msBetweenSeq1Seq2);
 
-    for (uint32_t i=0; i< seq2Flashes; i++) {
-      palToggleLine(ledLine);
-      chThdSleepMilliseconds(msBetweenFlashes);
+    if (msBetweenSeq1Seq2) {
+      chThdSleepMilliseconds(msBetweenSeq1Seq2);
+
+      for (uint32_t i=0; i< seq2Flashes; i++) {
+	palToggleLine(ledLine);
+	chThdSleepMilliseconds(msBetweenFlashes);
+      }
+      palClearLine(ledLine);
     }
-    palClearLine(ledLine);
+    
     chThdSleepMilliseconds(msBetweenSeqs);
   }
   

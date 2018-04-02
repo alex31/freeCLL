@@ -2,15 +2,6 @@
 TODO:
 
 
-° use the led blinker to display error condition :
-
-  N fast blink, 1 second blanc
-
-  N=1: OK
-  N=2: no serial com
-  N=3: checksum error on incoming messages
-  N=4: out of bound arg (index or duty)
-
-
+°test led blinker to display error condition :
 
 ° use timer in input capture (no pwm input) and use the 4 channels

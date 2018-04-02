@@ -12,11 +12,11 @@ public:
 	   uint16_t _msBetweenFlashes)
     : ledLine(_ledLine),
       msBetweenSeqs{_msBetweenSeqs}, msBetweenSeq1Seq2{_msBetweenSeq1Seq2}, msBetweenFlashes{_msBetweenFlashes},
-      seq1Flashes{1}, seq2Flashes{0}
+      seq1Flashes{2}, seq2Flashes{0}
   {launchThread();};
   
   void setFlashes(uint8_t _seq1Flashes, uint8_t _seq2Flashes)
-  {seq1Flashes = _seq1Flashes; seq2Flashes = _seq2Flashes; };
+  {seq1Flashes = 2*_seq1Flashes; seq2Flashes = 2*_seq2Flashes; };
 
 private:
   void launchThread(void);
