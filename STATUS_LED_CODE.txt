@@ -1,0 +1,10 @@
+
+1 flash  : OK
+
+no flash : program hangs (internal error)
+
+2 flashes  : no serial message received
+3 flashes  : checksum error
+4 flashes  : unexpected lenght of message
+5 flashes  : unimplemented msgId parameter 
+6 flashes  : incorrect parameters for PWM_ORDER msg (duty or linkId)
