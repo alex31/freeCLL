@@ -24,7 +24,7 @@ endif
 ifeq ($(USE_OPT),)
   USE_OPT =  -Os  -flto  -Wall -Wextra \
 	    -falign-functions=16 -fomit-frame-pointer \
-	     $(GCC_DIAG)
+	     $(GCC_DIAG) -specs=nano.specs
 endif
 ifeq ($(USE_OPT),)
   USE_OPT =  -Og  -ggdb3  -Wall -Wextra \

@@ -272,6 +272,7 @@ void castelLinkStart(void)
 		   ledBlink.setFlashes(3,0);
 		 },
 		 nullptr);
+  ledBlink.setFlashes(2,0);
 }
 
 
@@ -279,8 +280,6 @@ void castelLinkSetDuty(const uint8_t escIdx, const int16_t dutyPerTenThousand)
 {
   if (escIdx < escLinks.size()) {
     escLinks[escIdx].setDuty(dutyPerTenThousand);
-    if ((dutyPerTenThousand < 1000) || (dutyPerTenThousand > 2000))
-      ledBlink.setFlashes(6,0);
   } else {
     ledBlink.setFlashes(6,0); 
   }
@@ -518,6 +517,8 @@ void LinkState::setDuty(int16_t castelDuty)
   currentDuty = castelDuty;
   
   if (castelDuty != CASTELLINK::PWM_DISABLE) {
+    ledBlink.setFlashes(
+			((castelDuty < 900) || (castelDuty > 2200)) ? 6 : 1, 0);
     pwmEnableChannel(&pwmd, pwmCmdCh, castelDuty);
     pwmEnableChannel(&pwmd, pwmCmdHiZ,
 		     castelDuty + CASTELLINK::HIGHZ_TIMESHIFT_TICKS);
@@ -525,6 +526,7 @@ void LinkState::setDuty(int16_t castelDuty)
     pwmEnablePeriodicNotification(&pwmd);
     pwmEnableChannelNotification(&pwmd, pwmCmdHiZ);
   } else {
+    ledBlink.setFlashes(1,0);
     pwmDisableChannel(&pwmd, pwmCmdCh);
     pwmDisableChannel(&pwmd, pwmCmdHiZ);
   }
