@@ -1,0 +1,8 @@
+[submodule "MODULES/chibios_enac_various_common"]
+	path = MODULES/chibios_enac_various_common
+	url = https://github.com/alex31/chibios_enac_various_common.git
+[submodule "MODULES/ChibiOS"]
+	path = MODULES/ChibiOS
+	url = https://github.com/ChibiOS/ChibiOS.git
+[submodule "ChibiOS"]
+	branch = stable_18.2.x

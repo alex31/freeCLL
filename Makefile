@@ -113,20 +113,9 @@ PROJECT = ch
 BOARD = NUCLEO432
 
 # Imported source files and paths
-MY_DIRNAME=../../../ChibiOS_stable
-ifneq "$(wildcard $(MY_DIRNAME) )" ""
-   RELATIVE=../../..
-else
-  RELATIVE=../..
-endif
-CHIBIOS = $(RELATIVE)/ChibiOS_stable
-STMSRC = $(RELATIVE)/COMMON/stm
-VARIOUS = $(RELATIVE)/COMMON/various
+CHIBIOS = MODULES/ChibiOS
+VARIOUS = MODULES/chibios_enac_various_common
 USBD_LIB = $(VARIOUS)/Chibios-USB-Devices
-
-
-
-
 
 # Startup files.
 include $(CHIBIOS)/os/common/startup/ARMCMx/compilers/GCC/mk/startup_stm32l4xx.mk
@@ -194,9 +183,8 @@ TCPPSRC =
 ASMSRC =
 ASMXSRC = $(STARTUPASM) $(PORTASM) $(OSALASM)
 
-INCDIR = $(CHIBIOS)/os/license \
-         $(STARTUPINC) $(KERNINC) $(PORTINC) $(OSALINC) \
-         $(HALINC) $(PLATFORMINC) $(BOARDINC) $(TESTINC) \
+INCDIR = $(ALLINC) $(CHIBIOS)/os/license \
+         $(BOARDINC) \
          $(CHIBIOS)/os/various $(VARIOUS)
 
 #
@@ -272,7 +260,7 @@ $(OBJS): local/$(BOARD)/board.h
 
 
 local/$(BOARD)/board.h: local/$(BOARD)/board.cfg
-	boardGen.pl --no-pp-line	$<  $@
+	$(VARIOUS)/TOOLS/boardGen.pl --no-pp-line	$<  $@
 
 
 stflash: all
