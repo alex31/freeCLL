@@ -383,7 +383,7 @@ sub getSerial()
 }
 
 
-sub geneCastelLinkMsgsCB($)
+sub geneCastelLinkMsgsCB()
 {
     foreach my $escIdx (0,1) {
 	my $pwmInTenThousand = 1000+($tkObject{"clink${escIdx}"}*10); 
