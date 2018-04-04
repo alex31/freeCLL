@@ -428,11 +428,11 @@ void castelLinkData::convertValues(void)
   const float cal_coeff_1 = raw->get_calibration_1ms();
   const bool temp_NTC = raw->get_temp_linear_or_cal() < raw->get_temp_ntc_or_cal();
 
+  msgId=TELEMETRY;
   for (size_t i=0; i< datas.size(); i++) {
     if ((i+1 < raw->get_raw_len()) && (i < scale_coeffs.size()))
       datas[i] = ((raw->get_raw_ref()[i+1] - cal_coeff_0) / cal_coeff_1) * scale_coeffs[i];
   }
-
 
   /*
     ° attempt to make another correction between pwm pulse len and ESC measured pulse len
@@ -456,7 +456,7 @@ void castelLinkData::convertValues(void)
 void castelLinkData::sendTelemetry(void) 
 {
   simpleMsgSend(CASTELLINK::STREAM_TELEMETRY_PTR, reinterpret_cast<uint8_t *> (this),
-		sizeof(datas) + sizeof(escIdx));
+		sizeof(msgId) + sizeof(datas) + sizeof(escIdx));
 }
 
 uint8_t  LinkState::indexer = 0;

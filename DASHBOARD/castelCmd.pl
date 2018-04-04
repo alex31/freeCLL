@@ -334,9 +334,13 @@ sub fletcher16 ($$)
 sub castelLinkMessageCb ($)
 {
     my ($bufferRef) = @_;
-    my ($bat_voltage, $ripple_voltage, $current, $throttle, $power,		   
-	$rpm, $bec_voltage, $bec_current, $temperature, $channel) = unpack ('f9L', $$bufferRef);
+    my ($msgId, $bat_voltage, $ripple_voltage, $current, $throttle, $power,		   
+	$rpm, $bec_voltage, $bec_current, $temperature, $channel) = unpack ('Lf9L', $$bufferRef);
 
+    if ($msgId != 0) {
+	warn "unknown msgId $msgId\n";
+	return;
+    }
 
     $varData[$channel]->{'bat_voltage'} = sprintf ("%.2f", $bat_voltage);
     $varData[$channel]->{'ripple_voltage'} = sprintf ("%.2f", $ripple_voltage);

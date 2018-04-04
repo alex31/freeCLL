@@ -47,9 +47,10 @@ public:
   uint8_t  getEscIdx(void)  const {return escIdx;};
 };
 
-typedef enum  : uint16_t {PWM_ORDER=0, CALIBRATE} MessageId;
+typedef enum  : uint16_t {PWM_ORDER=0, CALIBRATE} IncomingMessageId;
+typedef enum  : uint32_t {TELEMETRY=0}		  OutcommingMessageId;
 typedef struct {
-  MessageId msgId;
+  IncomingMessageId msgId;
   int16_t  escIdx;
   int16_t  duty;
 } TelemetryDownMsg;
@@ -82,17 +83,18 @@ private:
 private:
 
   struct {
+    OutcommingMessageId msgId;
     union {
       struct {
-	float	bat_voltage;
-	float	ripple_voltage;
-	float	current;
-	float	throttle;
-	float	power;
-	float	rpm;
-	float	bec_voltage;
-	float	bec_current;
-	float	temperature;             
+	float	 bat_voltage;
+	float	 ripple_voltage;
+	float	 current;
+	float	 throttle;
+	float	 power;
+	float	 rpm;
+	float	 bec_voltage;
+	float	 bec_current;
+	float	 temperature;             
       };
       std::array<float, 9> datas;
     };
