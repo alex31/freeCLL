@@ -71,7 +71,7 @@ it's nearly 50x more powerfull than an AVR2560 (80Mhz, 32 bits, FPU,
 80ko RAM) vs (16Mhz, 8bit, no FPU, 8ko ram)
 
 There is a little bit soldering that is explained in the PDF
-documentation.
+documentation : RootDir/DOC/soldering.pdf
 
 
 4/ configure the ESC
