@@ -3,6 +3,6 @@
 	url = https://github.com/alex31/chibios_enac_various_common.git
 [submodule "MODULES/ChibiOS"]
 	path = MODULES/ChibiOS
-	url = https://github.com/ChibiOS/ChibiOS.git
+	url = git@github.com:alex31/ChibiOS.git
 [submodule "ChibiOS"]
-	branch = stable_18.2.x
+	branch = stable_18.2.x_ext_fixes_i2c_slave_fixes_adc_injected
