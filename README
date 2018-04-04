@@ -1,6 +1,6 @@
 
 freeCLL :
-A Castel Link Live protocol converter for Electronic Speed Controler (ESC)
+A Castle Link Live protocol converter for Electronic Speed Controler (ESC)
 
 
 Summary :
@@ -22,11 +22,11 @@ Summary :
 
 1/ Abstract
 
-ESC of brand Castel Creation are able to send back telemetry data
-(rpm, temperature, current, etc etc) using a protocol named Castel
+ESC of brand Castle Creation are able to send back telemetry data
+(rpm, temperature, current, etc etc) using a protocol named Castle
 Link Live.
 
-Castel Creation used to sell a protocol converter called castel serial
+Castle Creation used to sell a protocol converter called castle serial
 link, but it is unfortunately difficult to find.
 
 freeCLL use a cheap and available devboard named NUCLEOL432 to do
@@ -36,21 +36,21 @@ able to control power, and to get back parameters from the ESC.
 
 2/ Goals
 
-Castel Creation (http://home.castlecreations.com/) are selling ESC
+Castle Creation (http://home.castlecreations.com/) are selling ESC
 with telemetry capabilities. Protocol is described here :
 https://dzf8vqv24eqhg.cloudfront.net/userfiles/4671/6540/ckfinder/files/Product%20Manuals/Accessories%20and%20replacement%20parts/castle_link_live_2_0.pdf?dc=201606221536-537
 
 If you want to control theses ESC with a PC, you vill need a device
 that can plug by serial link or USB to the computer on one side, and by PWM
 on the other side, that's what is doing a device sold by caste
-creation : Castel Link Live
+creation : Castle Link Live
 https://dzf8vqv24eqhg.cloudfront.net/userfiles/4671/6540/ckfinder/files/Product%20Manuals/Accessories%20and%20replacement%20parts/castle_serial_link_v1_5.pdf?dc=201606221536-784
 
-Castel Link Live is a multi protocol converter, I²C+Serial+SPI+Analog
+Castle Link Live is a multi protocol converter, I²C+Serial+SPI+Analog
 <=> PWM for one ESC. freeCLL is different, it's only serial over
 USB <=> PWM, but it can control two ESC.
 
-Another difference is that the Castel Link Live device is based on an
+Another difference is that the Castle Link Live device is based on an
 ask answer protocol, freeCLL use a event approach : telemetry is
 sent as it is available.
 
@@ -75,9 +75,9 @@ documentation.
 
 
 4/ configure the ESC
-The Castel Link ESC Link Live protocol is not enabled by default on
-the ESC, you have to use a Castel Creation cable to connect your ESC
-and activate Castel Link Live telemetry : ypu need an Castle Link USB
+The Castle Link ESC Link Live protocol is not enabled by default on
+the ESC, you have to use a Castle Creation cable to connect your ESC
+and activate Castle Link Live telemetry : ypu need an Castle Link USB
 Programming Kit, and the free windows only program to do so :
 http://support.castlecreations.com/castle-link-faq
 
@@ -128,7 +128,7 @@ Payload for the incomming message :
 Payload for the outcomming message :
 
 uint32_t msgId :for now : only 0 value is sent : telemetry message
-float	 bat_voltage: see castel creation link live protocol description (cf links above)
+float	 bat_voltage: see castle creation link live protocol description (cf links above)
 float	 ripple_voltage: 
 float	 current:
 float	 throttle:
@@ -185,7 +185,7 @@ command two ESC and see actual telemetry parameters. Of course, Perl, and Perl::
 
 On linux, you can launch the tool :
 cd DASHBOARD
-./castelCmd.pl /dev/ttyACM0
+./castleCmd.pl /dev/ttyACM0
 
 10/ Furthers devs
 I have wrotten freeCLL to let ENAC Aerodynamical researcher to command 2 motors in a wind tunnel.

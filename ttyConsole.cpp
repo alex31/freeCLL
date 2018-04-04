@@ -18,7 +18,7 @@
 #include "printf.h"
 #include "portage.h"
 #include "config.hpp"
-#include "castel_link.hpp"
+#include "castle_link.hpp"
 
 /*===========================================================================*/
 /* START OF EDITABLE SECTION                                           */
@@ -40,7 +40,7 @@ static const ShellCommand commands[] = {
   {"threads", cmd_threads},	// affiche pour chaque thread le taux d'utilisation de la pile et du CPU
 #endif
   {"uid", cmd_uid},		// affiche le numéro d'identification unique du MCU
-  {"duty", cmd_duty},		// change pwm duty for attached castel link controler
+  {"duty", cmd_duty},		// change pwm duty for attached castle link controler
   {"param", cmd_param},		// fonction à but pedagogique qui affiche les
 				//   paramètres qui lui sont passés
   {NULL, NULL}			// marqueur de fin de tableau
@@ -154,9 +154,9 @@ static void cmd_duty(BaseSequentialStream *lchp, int argc,const char* const argv
   const float rawDuty = atof(argv[0]);
   const float duty = INRANGE(-20.0, 120.0, rawDuty);
   if (duty != 0)
-    castelLinkSetDuty (500 + duty * 5);
+    castleLinkSetDuty (500 + duty * 5);
   else
-    castelLinkSetDuty (0);
+    castleLinkSetDuty (0);
 
   DebugTrace ("set duty to %u", static_cast<uint16_t>(duty * 100));
 }

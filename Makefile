@@ -155,7 +155,7 @@ CSRC = $(STARTUPSRC) \
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global
 # setting.
 CPPSRC =               ttyConsole.cpp \
-		       castel_link.cpp \
+		       castle_link.cpp \
 		       led_blink.cpp \
 		       main.cpp
 

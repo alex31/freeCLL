@@ -67,7 +67,7 @@ struct PwmCoupledIcuParam {
 
 #include "user_config.hpp"
 
-namespace CASTELLINK {
+namespace CASTLELINK {
   // COMPUTED CONSTANTS, don't EDIT THIS SECTION until you know what you do
   static inline constexpr uint32_t	TICK_FREQ = PWM_FREQ * TICK_PER_PERIOD;
   static inline constexpr uint32_t	HIGHZ_TIMESHIFT_TICKS = usec2rtc(TICK_FREQ, HIGHZ_TIMESHIFT_MICROSECONDS);

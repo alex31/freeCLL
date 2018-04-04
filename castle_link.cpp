@@ -1,4 +1,4 @@
-#include "castel_link.hpp"
+#include "castle_link.hpp"
 
 #include <ch.h>
 #include <hal.h>
@@ -43,7 +43,7 @@ public:
 private:
   static uint8_t indexer;
 
-  castelLinkRawData * volatile currentRaw;
+  castleLinkRawData * volatile currentRaw;
   volatile PulseSate  pulseState;
   PWMDriver &pwmd;
   ICUDriver &icud;
@@ -74,8 +74,8 @@ static void telemetryReceive_cb(const uint8_t *buffer, const size_t len,  void *
 #                 |___/  |_|   \___/  |_.__/   \__,_| |_|         
 */
 static THD_WORKING_AREA(waSendTelemetry, 1024);
-static castelLinkRawData raw_pool[CASTELLINK::FIFO_SIZE];
-static msg_t msg_raw_fifo[CASTELLINK::FIFO_SIZE];
+static castleLinkRawData raw_pool[CASTLELINK::FIFO_SIZE];
+static msg_t msg_raw_fifo[CASTLELINK::FIFO_SIZE];
 static objects_fifo_t raw_fifo;
 static virtual_timer_t vtTelemetry;
 
@@ -93,10 +93,10 @@ static inline void debugPulse (const ioline_t line) {
 
 
 static std::array<LinkState, 2>  escLinks {
-  LinkState{CASTELLINK::PWM, CASTELLINK::ICU1,
-      CASTELLINK::PWM_COMMAND_CH_1, CASTELLINK::PWM_HIGHZ_CH_1},
-  LinkState{CASTELLINK::PWM, CASTELLINK::ICU2,
-      CASTELLINK::PWM_COMMAND_CH_2, CASTELLINK::PWM_HIGHZ_CH_2}
+  LinkState{CASTLELINK::PWM, CASTLELINK::ICU1,
+      CASTLELINK::PWM_COMMAND_CH_1, CASTLELINK::PWM_HIGHZ_CH_1},
+  LinkState{CASTLELINK::PWM, CASTLELINK::ICU2,
+      CASTLELINK::PWM_COMMAND_CH_2, CASTLELINK::PWM_HIGHZ_CH_2}
 };
 
 /*
@@ -110,7 +110,7 @@ static std::array<LinkState, 2>  escLinks {
 
 // serial link with computer host
 static constexpr SerialConfig  hostcfg =  {
-  .speed = CASTELLINK::TELEMETRY_BAUD,
+  .speed = CASTLELINK::TELEMETRY_BAUD,
   .cr1 = 0,                                      // pas de parité
   .cr2 = USART_CR2_STOP1_BITS | USART_CR2_LINEN, // 1 bit de stop, detection d'erreur de trame avancée
   .cr3 = 0                                       // pas de controle de flux hardware (CTS, RTS)
@@ -120,7 +120,7 @@ static constexpr SerialConfig  hostcfg =  {
 /*
 ° pwm used to drive 2 ESCs : 4 channels are used, 2 by ESC
   foreach ESC, one channel for pwm generation, one channel to trig high impedance mode for pwm when
-  castel creation ESC drive the line
+  castle creation ESC drive the line
 
 ° static configuration values are in user_config.hpp
 
@@ -133,22 +133,22 @@ static constexpr SerialConfig  hostcfg =  {
 
 */
 static constexpr PWMConfig pwmcfg = {     
-  .frequency = CASTELLINK::TICK_FREQ,
-  .period    = CASTELLINK::TICK_PER_PERIOD,
+  .frequency = CASTLELINK::TICK_FREQ,
+  .period    = CASTLELINK::TICK_PER_PERIOD,
   .callback  = [] (PWMDriver *pwmd) {
     (void) pwmd;
     chSysLockFromISR();
     escLinks[0].pwmStartIcu_cb();
     escLinks[1].pwmStartIcu_cb();
-    gptStopTimerI(&CASTELLINK::GPT_PUSHPULL);
-    gptStartOneShotI(&CASTELLINK::GPT_PUSHPULL, CASTELLINK::PUSHPULL_TIMESHIFT_TICKS);
+    gptStopTimerI(&CASTLELINK::GPT_PUSHPULL);
+    gptStartOneShotI(&CASTLELINK::GPT_PUSHPULL, CASTLELINK::PUSHPULL_TIMESHIFT_TICKS);
     chSysUnlockFromISR();
   },
   .channels  = {
-    [CASTELLINK::PWM_COMMAND_CH_1] =
+    [CASTLELINK::PWM_COMMAND_CH_1] =
     {.mode = PWM_OUTPUT_ACTIVE_LOW, .callback = nullptr}, 
 
-    [CASTELLINK::PWM_HIGHZ_CH_1] =
+    [CASTLELINK::PWM_HIGHZ_CH_1] =
     {.mode = PWM_OUTPUT_DISABLED,   .callback = [] (PWMDriver *pwmd) {
 	(void) pwmd;
 	chSysLockFromISR();
@@ -157,7 +157,7 @@ static constexpr PWMConfig pwmcfg = {
       }},
 
     
-    [CASTELLINK::PWM_HIGHZ_CH_2] =
+    [CASTLELINK::PWM_HIGHZ_CH_2] =
     {.mode = PWM_OUTPUT_DISABLED,   .callback = [] (PWMDriver *pwmd) {
 	(void) pwmd;
 	chSysLockFromISR();
@@ -165,7 +165,7 @@ static constexpr PWMConfig pwmcfg = {
 	chSysUnlockFromISR();
       }},
     
-    [CASTELLINK::PWM_COMMAND_CH_2] =
+    [CASTLELINK::PWM_COMMAND_CH_2] =
     {.mode = PWM_OUTPUT_ACTIVE_LOW,   .callback = nullptr},
 
     [4] = {.mode = PWM_OUTPUT_DISABLED,   .callback = nullptr},
@@ -183,7 +183,7 @@ static constexpr PWMConfig pwmcfg = {
  */
 static constexpr ICUConfig icu1cfg = {
   .mode = ICU_INPUT_ACTIVE_HIGH,
-  .frequency = CASTELLINK::ICU_TIMFREQ,
+  .frequency = CASTLELINK::ICU_TIMFREQ,
   .width_cb = [] (ICUDriver *icud) {
     (void) icud;
     chSysLockFromISR();
@@ -192,13 +192,13 @@ static constexpr ICUConfig icu1cfg = {
   },
   .period_cb = nullptr, 
   .overflow_cb = nullptr,
-  .channel = CASTELLINK::ICU1_CHANNEL,
+  .channel = CASTLELINK::ICU1_CHANNEL,
   .dier = 0,
 };
 
 static constexpr ICUConfig icu2cfg = {
   .mode = ICU_INPUT_ACTIVE_HIGH,
-  .frequency = CASTELLINK::ICU_TIMFREQ,
+  .frequency = CASTLELINK::ICU_TIMFREQ,
   .width_cb = [] (ICUDriver *icud) {
     (void) icud;
     chSysLockFromISR();
@@ -207,7 +207,7 @@ static constexpr ICUConfig icu2cfg = {
   },
   .period_cb = nullptr, 
   .overflow_cb = nullptr,
-  .channel = CASTELLINK::ICU2_CHANNEL,
+  .channel = CASTLELINK::ICU2_CHANNEL,
   .dier = 0,
 };
 
@@ -217,7 +217,7 @@ static constexpr ICUConfig icu2cfg = {
   pushpush mode
  */
 static constexpr GPTConfig gptcfg = {
-  CASTELLINK::GPT_PP_FREQ,
+  CASTLELINK::GPT_PP_FREQ,
   [] (GPTDriver *gptp) {
     (void) gptp;
     chSysLockFromISR();
@@ -247,10 +247,10 @@ static constexpr GPTConfig gptcfg = {
 
 
 
-void castelLinkStart(void)
+void castleLinkStart(void)
 {
   chVTObjectInit(&vtTelemetry);
-  chFifoObjectInit (&raw_fifo, sizeof(castelLinkRawData), CASTELLINK::FIFO_SIZE,
+  chFifoObjectInit (&raw_fifo, sizeof(castleLinkRawData), CASTLELINK::FIFO_SIZE,
 		    4,  raw_pool, msg_raw_fifo);
   chThdCreateStatic(waSendTelemetry, sizeof(waSendTelemetry), NORMALPRIO, &sendTelemetryThd, NULL);
 
@@ -258,14 +258,14 @@ void castelLinkStart(void)
   escLinks[0].initFifoFetch();
   escLinks[1].initFifoFetch();
 
-  gptStart(&CASTELLINK::GPT_PUSHPULL, &gptcfg);
-  pwmStart(&CASTELLINK::PWM, &pwmcfg);
-  icuStart(&CASTELLINK::ICU1, &icu1cfg);
-  icuOptStart(&CASTELLINK::ICU2, &icu2cfg); // TIM15 cannot be start with official ChibiOS function
+  gptStart(&CASTLELINK::GPT_PUSHPULL, &gptcfg);
+  pwmStart(&CASTLELINK::PWM, &pwmcfg);
+  icuStart(&CASTLELINK::ICU1, &icu1cfg);
+  icuOptStart(&CASTLELINK::ICU2, &icu2cfg); // TIM15 cannot be start with official ChibiOS function
   
-  sdStart(&CASTELLINK::SD_TELEMETRY, &hostcfg);
+  sdStart(&CASTLELINK::SD_TELEMETRY, &hostcfg);
 
-  simpleMsgBind (CASTELLINK::STREAM_TELEMETRY_PTR, telemetryReceive_cb,
+  simpleMsgBind (CASTLELINK::STREAM_TELEMETRY_PTR, telemetryReceive_cb,
 		 [] (const uint32_t recCrc, const uint32_t calcCrc) {
 		   (void) recCrc;
 		   (void) calcCrc;
@@ -276,7 +276,7 @@ void castelLinkStart(void)
 }
 
 
-void castelLinkSetDuty(const uint8_t escIdx, const int16_t dutyPerTenThousand)
+void castleLinkSetDuty(const uint8_t escIdx, const int16_t dutyPerTenThousand)
 {
   if (escIdx < escLinks.size()) {
     escLinks[escIdx].setDuty(dutyPerTenThousand);
@@ -285,7 +285,7 @@ void castelLinkSetDuty(const uint8_t escIdx, const int16_t dutyPerTenThousand)
   }
   
   //debugPulse(LINE_DBG_LINEA01);
-  if constexpr (CASTELLINK::SHUTDOWN_WITHOUT_TELEMETRY_MS != 0) {
+  if constexpr (CASTLELINK::SHUTDOWN_WITHOUT_TELEMETRY_MS != 0) {
 #if DEBUG_ASSERTS_ENABLED == FALSE
       // should no be needed, perhaps BUGS here :
       // works without chVTReset in all configurations but this one :
@@ -295,12 +295,12 @@ void castelLinkSetDuty(const uint8_t escIdx, const int16_t dutyPerTenThousand)
 #endif
       // if serial link do not send any data for more than SHUTDOWN_WITHOUT_TELEMETRY_MS
       // we shut down pwm (engine stop)
-      chVTSet(&vtTelemetry, TIME_MS2I(CASTELLINK::SHUTDOWN_WITHOUT_TELEMETRY_MS),
+      chVTSet(&vtTelemetry, TIME_MS2I(CASTLELINK::SHUTDOWN_WITHOUT_TELEMETRY_MS),
 	      [] (void *arg) {(void) arg;
 		chSysLockFromISR();
 		//		debugPulse(LINE_DBG_LINEA06);
-		escLinks[0].setDutyFromISR(CASTELLINK::PWM_DISABLE);
-		escLinks[1].setDutyFromISR(CASTELLINK::PWM_DISABLE);
+		escLinks[0].setDutyFromISR(CASTLELINK::PWM_DISABLE);
+		escLinks[1].setDutyFromISR(CASTLELINK::PWM_DISABLE);
 		ledBlink.setFlashes(2,0);
 		chSysUnlockFromISR();
 	      },
@@ -341,17 +341,17 @@ void castelLinkSetDuty(const uint8_t escIdx, const int16_t dutyPerTenThousand)
 #                | | \ \  | (_| |  \ V  V /  | |__| |  | (_| | \ |_   | (_| |        
 #                |_|  \_\  \__,_|   \_/\_/   |_____/    \__,_|  \__|   \__,_|        
 */
-castelLinkRawData::castelLinkRawData() : index{0}, raw{0} 
+castleLinkRawData::castleLinkRawData() : index{0}, raw{0} 
 {
 }
 
-void castelLinkRawData::resetIndex(void)
+void castleLinkRawData::resetIndex(void)
 {
   index = 0;
 }
 
 
-bool  castelLinkRawData::push(const uint16_t val)
+bool  castleLinkRawData::push(const uint16_t val)
 {
   if (index < raw_len) {
     raw[index++]=val;
@@ -362,7 +362,7 @@ bool  castelLinkRawData::push(const uint16_t val)
   return filled;
 }
 
-void castelLinkRawData::dbgTrace(void) const
+void castleLinkRawData::dbgTrace(void) const
 {
 #if defined TRACE
   DebugTrace ("");
@@ -387,26 +387,26 @@ void castelLinkRawData::dbgTrace(void) const
 #                | |__| |  | (_| | \ |_   | (_| |        
 #                |_____/    \__,_|  \__|   \__,_|        
 */
-castelLinkData::castelLinkData() : datas{0},
+castleLinkData::castleLinkData() : datas{0},
 				   escIdx{0},
 				   raw{nullptr}
 {
 }
 
-castelLinkData::castelLinkData(const castelLinkRawData* _raw) : 
+castleLinkData::castleLinkData(const castleLinkRawData* _raw) : 
 							 raw{_raw}
 {
   convertValues();
 }
 
 
-void castelLinkData::populate(const castelLinkRawData* _raw)
+void castleLinkData::populate(const castleLinkRawData* _raw)
 {
   raw = _raw;
   convertValues();
 }
 
-void castelLinkData::dbgTrace(void) const
+void castleLinkData::dbgTrace(void) const
 {
 #if defined TRACE
   DebugTrace ("bat = %.2f ripple=%.2f current=%.2f throttle=%.2f power=%.2f",
@@ -417,7 +417,7 @@ void castelLinkData::dbgTrace(void) const
 }
 
 
-void castelLinkData::convertValues(void) 
+void castleLinkData::convertValues(void) 
 {
   if (raw == nullptr)
     chSysHalt ("convertValues : raw  == nullptr");
@@ -448,14 +448,14 @@ void castelLinkData::convertValues(void)
     const float r0 = 10000;
     const float r2 = 10200;
     const float b = 3455;
-    // from castel link live protocol documentation
+    // from castle link live protocol documentation
     temperature = 1.0 / (logf(val*r2/(255.0-val)/r0) / b + 1/298.0) - 273;
   }
 }
 
-void castelLinkData::sendTelemetry(void) 
+void castleLinkData::sendTelemetry(void) 
 {
-  simpleMsgSend(CASTELLINK::STREAM_TELEMETRY_PTR, reinterpret_cast<uint8_t *> (this),
+  simpleMsgSend(CASTLELINK::STREAM_TELEMETRY_PTR, reinterpret_cast<uint8_t *> (this),
 		sizeof(msgId) + sizeof(datas) + sizeof(escIdx));
 }
 
@@ -463,7 +463,7 @@ uint8_t  LinkState::indexer = 0;
 
 void LinkState::initFifoFetch(void)
 {
-  currentRaw =  static_cast<castelLinkRawData *> (chFifoTakeObjectTimeout(&raw_fifo, TIME_IMMEDIATE));
+  currentRaw =  static_cast<castleLinkRawData *> (chFifoTakeObjectTimeout(&raw_fifo, TIME_IMMEDIATE));
   currentRaw->setEscIdx (escIdx);
 }
 
@@ -497,31 +497,31 @@ void LinkState::icuWidth_cb(void)
   pulseState = PULSE_ACQUIRED;
   
   if (currentRaw) {
-    if (width >= CASTELLINK::ICU_MINPULSE_TICK && width <= CASTELLINK::ICU_MAXPULSE_TICK) {
+    if (width >= CASTLELINK::ICU_MINPULSE_TICK && width <= CASTLELINK::ICU_MAXPULSE_TICK) {
       icuStopCaptureI(&icud);
       if (currentRaw->push(width)) {
 	chFifoSendObjectI(&raw_fifo, currentRaw);
-	currentRaw =  static_cast<castelLinkRawData *> (chFifoTakeObjectI(&raw_fifo));
+	currentRaw =  static_cast<castleLinkRawData *> (chFifoTakeObjectI(&raw_fifo));
 	currentRaw->setEscIdx(escIdx);
       }
     }
   } else { // currentRaw == nullptr
-    currentRaw = static_cast<castelLinkRawData *> (chFifoTakeObjectI(&raw_fifo));
+    currentRaw = static_cast<castleLinkRawData *> (chFifoTakeObjectI(&raw_fifo));
     currentRaw->setEscIdx(escIdx);
   }
 }
 
 
-void LinkState::setDuty(int16_t castelDuty)
+void LinkState::setDuty(int16_t castleDuty)
 {
-  currentDuty = castelDuty;
+  currentDuty = castleDuty;
   
-  if (castelDuty != CASTELLINK::PWM_DISABLE) {
+  if (castleDuty != CASTLELINK::PWM_DISABLE) {
     ledBlink.setFlashes(
-			((castelDuty < 900) || (castelDuty > 2200)) ? 6 : 1, 0);
-    pwmEnableChannel(&pwmd, pwmCmdCh, castelDuty);
+			((castleDuty < 900) || (castleDuty > 2200)) ? 6 : 1, 0);
+    pwmEnableChannel(&pwmd, pwmCmdCh, castleDuty);
     pwmEnableChannel(&pwmd, pwmCmdHiZ,
-		     castelDuty + CASTELLINK::HIGHZ_TIMESHIFT_TICKS);
+		     castleDuty + CASTLELINK::HIGHZ_TIMESHIFT_TICKS);
      
     pwmEnablePeriodicNotification(&pwmd);
     pwmEnableChannelNotification(&pwmd, pwmCmdHiZ);
@@ -532,14 +532,14 @@ void LinkState::setDuty(int16_t castelDuty)
   }
 }
   
-void LinkState::setDutyFromISR(int16_t castelDuty)
+void LinkState::setDutyFromISR(int16_t castleDuty)
 {
-  currentDuty = castelDuty;
+  currentDuty = castleDuty;
   
-  if (castelDuty != CASTELLINK::PWM_DISABLE) {
-    pwmEnableChannelI(&pwmd, pwmCmdCh, castelDuty);
+  if (castleDuty != CASTLELINK::PWM_DISABLE) {
+    pwmEnableChannelI(&pwmd, pwmCmdCh, castleDuty);
     pwmEnableChannelI(&pwmd, pwmCmdHiZ,
-		     castelDuty + CASTELLINK::HIGHZ_TIMESHIFT_TICKS);
+		     castleDuty + CASTLELINK::HIGHZ_TIMESHIFT_TICKS);
    
     
     pwmEnablePeriodicNotificationI(&pwmd);
@@ -575,7 +575,7 @@ static void telemetryReceive_cb(const uint8_t *buffer, const size_t len,  void *
     const TelemetryDownMsg *msg = reinterpret_cast<const TelemetryDownMsg *> (buffer);
     switch (msg->msgId) {
     case PWM_ORDER :
-      castelLinkSetDuty(msg->escIdx, msg->duty);
+      castleLinkSetDuty(msg->escIdx, msg->duty);
       break;
     case CALIBRATE : DebugTrace ("Calibrate not yet implemented");
       ledBlink.setFlashes(5,0);
@@ -601,11 +601,11 @@ static void sendTelemetryThd (void *arg)
 {
   (void)arg;
   chRegSetThreadName("telemetry");
-  castelLinkRawData *rawData=nullptr;
+  castleLinkRawData *rawData=nullptr;
   
   while (true) {
     chFifoReceiveObjectTimeout(&raw_fifo, reinterpret_cast<void **> (&rawData),  TIME_INFINITE);
-    castelLinkData processedData(rawData);
+    castleLinkData processedData(rawData);
     processedData.sendTelemetry();
     //    rawData->dbgTrace();
     processedData.dbgTrace();

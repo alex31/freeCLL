@@ -4,14 +4,14 @@
 #include <array>
 
 
-namespace CASTELLINK {
+namespace CASTLELINK {
   static inline constexpr int16_t	PWM_DISABLE = -1;
 }
 
-class castelLinkRawData
+class castleLinkRawData
 {
 public:
-  castelLinkRawData();
+  castleLinkRawData();
   void  resetIndex(void);
   bool  push(const uint16_t val);
   void dbgTrace(void) const ;
@@ -55,7 +55,7 @@ typedef struct {
   int16_t  duty;
 } TelemetryDownMsg;
 
-class castelLinkData
+class castleLinkData
 {
   static constexpr std::array<float, 10> scale_coeffs {
       20,
@@ -71,10 +71,10 @@ class castelLinkData
 
   
 public:
-  castelLinkData();
-  castelLinkData(const castelLinkRawData* _raw);
+  castleLinkData();
+  castleLinkData(const castleLinkRawData* _raw);
   void  sendTelemetry(void);
-  void populate(const castelLinkRawData* _raw);
+  void populate(const castleLinkRawData* _raw);
   void dbgTrace(void) const ;
   
 private:
@@ -100,9 +100,9 @@ private:
     };
     uint32_t	escIdx;
   };
-  const castelLinkRawData* raw;
+  const castleLinkRawData* raw;
 };  
 
   
-void castelLinkStart(void);
-void castelLinkSetDuty(const uint8_t escIdx, const int16_t dutyPerTenThousand);
+void castleLinkStart(void);
+void castleLinkSetDuty(const uint8_t escIdx, const int16_t dutyPerTenThousand);

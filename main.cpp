@@ -3,14 +3,14 @@
 #include "globalVar.h"
 #include "stdutil.h"
 #include "config.hpp"
-#include "castel_link.hpp"
+#include "castle_link.hpp"
 #include "ttyConsole.hpp"
 #include "led_blink.hpp"
 
 
 /*
 
-  ° connecter PA08 et PA05 ensemble -> entrée PWM du controller castellink
+  ° connecter PA08 et PA05 ensemble -> entrée PWM du controller castlelink
 
  */
 
@@ -21,7 +21,7 @@
   * un (mailBox + memory chunk manager) pour envoyer les 11 int16_t (contiennent des longueurs en µs ou .1µs)
   * la cb de l'ICU recupère les valeurs et les envoie dans la mailbox
 
-  * un fichier castellink_pwm
+  * un fichier castlelink_pwm
     ° conf ICU et PWM
     ° callback, etc
     ° fonction start
@@ -66,14 +66,14 @@ int main(void) {
 
   
 #ifdef TRACE
-  if  (&CASTELLINK::SD_TELEMETRY == &SD_SHELL) {
+  if  (&CASTLELINK::SD_TELEMETRY == &SD_SHELL) {
        chSysHalt("same serial link used for shell and telemetry");
     }
   consoleInit();
 #endif
   
   
-  castelLinkStart();
+  castleLinkStart();
   
 
 #ifdef TRACE

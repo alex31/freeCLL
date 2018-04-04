@@ -1,7 +1,7 @@
 #pragma once
 
 
-namespace CASTELLINK {
+namespace CASTLELINK {
   // USER CONSTANTS
   static inline constexpr PWMDriver&	PWM      = PWMD1;
   static inline constexpr uint32_t	PWM_COMMAND_CH_1 = 1_timChannel;
