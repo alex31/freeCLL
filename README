@@ -1,0 +1,204 @@
+
+freeCLL :
+A Castel Link Live protocol converter for Electronic Speed Controler (ESC)
+
+
+Summary :
+
+1/ Abstract
+2/ Goals
+3/ Get and Mod Hardware
+4/ configure the ESC
+5/ flash the firmware on the nucleo
+6/ Serial Protocol
+7/ Status Code
+8/ Compile from sources
+9/ Tools
+10/ Furthers devs
+
+
+
+
+
+1/ Abstract
+
+ESC of brand Castel Creation are able to send back telemetry data
+(rpm, temperature, current, etc etc) using a protocol named Castel
+Link Live.
+
+Castel Creation used to sell a protocol converter called castel serial
+link, but it is unfortunately difficult to find.
+
+freeCLL use a cheap and available devboard named NUCLEOL432 to do
+roughly the same job : connect a ESC to a computer with USB, be
+able to control power, and to get back parameters from the ESC.
+
+
+2/ Goals
+
+Castel Creation (http://home.castlecreations.com/) are selling ESC
+with telemetry capabilities. Protocol is described here :
+https://dzf8vqv24eqhg.cloudfront.net/userfiles/4671/6540/ckfinder/files/Product%20Manuals/Accessories%20and%20replacement%20parts/castle_link_live_2_0.pdf?dc=201606221536-537
+
+If you want to control theses ESC with a PC, you vill need a device
+that can plug by serial link or USB to the computer on one side, and by PWM
+on the other side, that's what is doing a device sold by caste
+creation : Castel Link Live
+https://dzf8vqv24eqhg.cloudfront.net/userfiles/4671/6540/ckfinder/files/Product%20Manuals/Accessories%20and%20replacement%20parts/castle_serial_link_v1_5.pdf?dc=201606221536-784
+
+Castel Link Live is a multi protocol converter, I²C+Serial+SPI+Analog
+<=> PWM for one ESC. freeCLL is different, it's only serial over
+USB <=> PWM, but it can control two ESC.
+
+Another difference is that the Castel Link Live device is based on an
+ask answer protocol, freeCLL use a event approach : telemetry is
+sent as it is available.
+
+
+
+3/ Get and Mod Hardware
+We have choosen Nucleo L432 hardware :
+http://www.st.com/en/evaluation-tools/nucleo-l432kc.html
+
+It's cheap, very powerfull, easy to flash without any external tool,
+and directly embed a usb serial converter.  There is plenty of 16 bits
+timers configrable in input capture mode to achieve very good accuracy
+for measuring time between pulse without jitter (no ISR overhead to
+measure time)
+
+Nucleo L432KC can be easily ordered on internet for about 10€, and
+it's nearly 50x more powerfull than an AVR2560 (80Mhz, 32 bits, FPU,
+80ko RAM) vs (16Mhz, 8bit, no FPU, 8ko ram)
+
+There is a little bit soldering that is explained in the PDF
+documentation.
+
+
+4/ configure the ESC
+The Castel Link ESC Link Live protocol is not enabled by default on
+the ESC, you have to use a Castel Creation cable to connect your ESC
+and activate Castel Link Live telemetry : ypu need an Castle Link USB
+Programming Kit, and the free windows only program to do so :
+http://support.castlecreations.com/castle-link-faq
+
+5/ flash the firmware on the nucleo
+For thoses who don't care on compiling sources by themselves, the
+precompiled binary is in the distro in the build directory.
+
+° plug the nucleo on the computer (need an micro usb cable)
+° the nucleo is seen as a mass media storage
+° mount the device (as an usb key) [Operating System agnostic, will
+work on linux,mac,windows]
+°copy build/ch.bin to the root of the mass media storage
+° program is now running on the nucleo side, the green led should quickly flash two
+times : it's a status code indicating that the device wait for serial
+frame
+
+° plug the engine, the ESC to the nucleo
+
+
+
+6/ Serial Protocol
+
+By default, 115200 bauds, 8 bit, 1 stop bit, no parity (8N1)
+baudrate can be edited at source level in the user_config.hpp file,
+constant TELEMETRY_BAUD. changing this need you to compile the source to generate
+a new binary.
+
+° for now, there is only one kind of incoming message, and one kind of
+outcomming message, but a msgId field is there in case future
+developments need different messages.
+
+° payload messages are encapsulated in a frame which help sync and error detection.
+
+° frame structure is the same for incomming and outcomming messages :
+
+0xFE 0xED : two start bytes
+LEN       : one byte for payload lenght
+PAYLOAD   : the payload, LEN bytes long
+CHK1      : checksum1 : theses are using the fletcher16 checksum calculation 
+CHK2      : checksum2 : on the payload : https://en.wikipedia.org/wiki/Fletcher%27s_checksum
+
+
+Payload for the incomming message :
+  int16_t  msgId : for now : only 0 value : pwm message is understood
+  int16_t  escIdx : for now : 0 or 1, in a possible future 0 .. 3
+  int16_t  duty : pwm pulse width in micro seconds (should be between 1000 and 2000)
+
+Payload for the outcomming message :
+
+uint32_t msgId :for now : only 0 value is sent : telemetry message
+float	 bat_voltage: see castel creation link live protocol description (cf links above)
+float	 ripple_voltage: 
+float	 current:
+float	 throttle:
+float	 power:
+float	 rpm:
+float	 bec_voltage:
+float	 bec_current:
+float	 temperature:             
+uint32_t escIdx: for now : 0 or 1, in a possible future 0 .. 3
+ 
+
+
+7/ Status Code
+the small green led on the Nucleo board will flash a simple status code :
+
+1 flash  : OK
+
+no flash : program hangs (internal error) : should not happen but hey, bugs do exist ...
+
+2 flashes  : no serial message received
+3 flashes  : checksum error
+4 flashes  : unexpected lenght of message
+5 flashes  : unimplemented msgId parameter 
+6 flashes  : incorrect parameters for PWM_ORDER msg (duty or linkId)
+
+
+8/ Compile from sources
+
+° freeCLL in written is C++17, so you need a compilation toolchain able to compile that language:
+gnu gcc 7.2 for ARM MCU can be downloaded here for linux, macosx, windows :
+https://developer.arm.com/open-source/gnu-toolchain/gnu-rm/downloads
+I am a linux user, I know the toolchain works on windows, but never try it.
+
++ install the toolchain, and modify your PATH to that arm-none-eabi-gcc can le launched from command line.
++ install a minimal developpment environment : at least gnu make.
+
+° freeCLL depends heavily on my favourite RTOS : ChibiOS http://www.chibios.org/dokuwiki/doku.php
+° freeCLL depends on some library and extensions to chibios
+
+theses two dependancy are included as git submodule, so what you need to get them is :
+
+git clone the freeCLL : git clone git@github.com:alex31/freeCLL.git
+cd freeCLL (root dir)
+git submodule init
+git submodule update
+
+make
+
+the binary is in the build directory
+
+9/ Tools
+In the DASHBOARD directory, there is a small tool written in Perl/Tk which can permit to
+command two ESC and see actual telemetry parameters. Of course, Perl, and Perl::Tk have to be installed
+
+On linux, you can launch the tool :
+cd DASHBOARD
+./castelCmd.pl /dev/ttyACM0
+
+10/ Furthers devs
+I have wrotten freeCLL to let ENAC Aerodynamical researcher to command 2 motors in a wind tunnel.
+
+° we can imagine to have 4 channels instead of 2, it's possible, but it will need :
+
++ to write an input capture driver for chibios (for now we use the pwm
+input driver that do not permit to use the 4 channels of a timer)
+
++ to do some mode soldering as USART2 which is conencted to the UART
+to USB converter conflicts with the timers, do we'll have to use
+USART1 instead, and do some rework/soldering on the nucleo to break
+USB<->USART2 link, and create USB<->USART1 link
+
+° we can add other protocols, I²C, SPI, etc
+
